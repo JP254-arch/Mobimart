@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "580060550825",
+    "project_id": "mobimart-b80a2",
+    "storage_bucket": "mobimart-b80a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:580060550825:android:13d98f1f805cb24fd67bb8",
+        "android_client_info": {
+          "package_name": "com.example.mobimart_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsS7t3ApdpGalD8o6HjF4a27V680spqc4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
