@@ -1,49 +1,98 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mobimart_app/features/models/product_model.dart';
 
 class UserModel {
   final String uid;
-  final String username;
+  final String name;
   final String email;
-  final String userImage;
-  final Timestamp createdAt;
-  final List userCart;
-  final List userWish;
-  final String role;
+  final String? phone;
+  final String role; // user | admin
+  final String? photoUrl;
+  final bool isActive;
+  final Timestamp? createdAt;
+  final Timestamp? updatedAt;
 
-  UserModel({
+  final List<ProductModel> wishlist;
+  final List<ProductModel> cart;
+
+  const UserModel({
     required this.uid,
-    required this.username,
+    required this.name,
     required this.email,
-    required this.userImage,
-    required this.createdAt,
-    required this.userCart,
-    required this.userWish,
+    this.phone,
     required this.role,
+    this.photoUrl,
+    required this.isActive,
+    this.createdAt,
+    this.updatedAt,
+    this.wishlist = const [],
+    this.cart = const [],
   });
 
-  factory UserModel.fromDocument(String uid, Map<String, dynamic> doc) {
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return UserModel(
-      uid: uid,
-      username: doc['username'] ?? '',
-      email: doc['email'] ?? '',
-      role: doc['role'] ?? 'user',
-      userImage: doc['userImage'] ?? '',
-      createdAt: doc['createdAt'] ?? Timestamp.now(),
-      userCart: List.from(doc['userCart'] ?? []),
-      userWish: List.from(doc['userWish'] ?? []),
+      uid: doc.id,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      phone: data['phone'],
+      role: data['role'] ?? 'user',
+      photoUrl: data['photoUrl'],
+      isActive: data['isActive'] ?? true,
+      createdAt: data['createdAt'],
+      updatedAt: data['updatedAt'],
+      wishlist: (data['wishlist'] as List<dynamic>?)
+              ?.map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      cart: (data['cart'] as List<dynamic>?)
+              ?.map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
-      'uid': uid,
-      'username': username,
+      'name': name,
       'email': email,
-      'userImage': userImage,
-      'createdAt': createdAt,
-      'userCart': userCart,
-      'userWish': userWish,
+      'phone': phone,
       'role': role,
+      'photoUrl': photoUrl,
+      'isActive': isActive,
+      'wishlist': wishlist.map((e) => e.toJson()).toList(),
+      'cart': cart.map((e) => e.toJson()).toList(),
+      'createdAt': createdAt,
+      'updatedAt': Timestamp.now(),
     };
   }
+
+  UserModel copyWith({
+    String? name,
+    String? email,
+    String? phone,
+    String? role,
+    String? photoUrl,
+    bool? isActive,
+    List<ProductModel>? wishlist,
+    List<ProductModel>? cart,
+  }) {
+    return UserModel(
+      uid: uid,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      photoUrl: photoUrl ?? this.photoUrl,
+      isActive: isActive ?? this.isActive,
+      wishlist: wishlist ?? this.wishlist,
+      cart: cart ?? this.cart,
+      createdAt: createdAt,
+      updatedAt: Timestamp.now(),
+    );
+  }
+
+  bool get isAdmin => role == 'admin';
+  bool get isUser => role == 'user';
 }

@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // Navigate based on role
-      final user = userProvider.getUser;
+      final user = userProvider.currentUser;
       if (user != null) {
         if (user.role == 'admin') {
           Navigator.pushReplacementNamed(context, RootScreen.routeName);
@@ -176,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () {
                               Navigator.of(
                                 context,
-                              ).pushNamed(RegisterScreen.routName);
+                              ).pushNamed(RegisterScreen.routeName);
                             },
                             child: const SubtitleTextWidget(
                               label: "Forgot password?",
@@ -258,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onPressed: () {
                                     Navigator.pushNamed(
                                       context,
-                                      RegisterScreen.routName,
+                                      RegisterScreen.routeName,
                                     );
                                   },
                                   child: SizedBox(

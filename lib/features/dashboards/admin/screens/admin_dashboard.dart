@@ -1,17 +1,63 @@
-import 'package:flutter/material.dart';
+// lib/features/admin/screens/admin_dashboard_screen.dart
 
-class AdminDashboard extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mobimart_app/features/screens/help_support_screen.dart';
+import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
+import 'package:mobimart_app/features/screens/settings_screen.dart';
+import '../screens/manage_users_screen.dart';
+import '../screens/manage_products_screen.dart';
+import '../screens/manage_orders_screen.dart';
+
+
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
   static const String routeName = '/admin-dashboard';
 
   @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  int userCount = 0;
+  int productCount = 0;
+  int orderCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .get();
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .get();
+
+      if (mounted) {
+        setState(() {
+          userCount = usersSnapshot.docs.length;
+          productCount = productsSnapshot.docs.length;
+          orderCount = ordersSnapshot.docs.length;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching stats: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Admin Dashboard'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -23,26 +69,23 @@ class AdminDashboard extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-
             Row(
-              children: const [
-                _StatCard(title: 'Users', value: '128'),
-                SizedBox(width: 12),
-                _StatCard(title: 'Products', value: '56'),
-                SizedBox(width: 12),
-                _StatCard(title: 'Orders', value: '214'),
+              children: [
+                _StatCard(title: 'Users', value: userCount.toString()),
+                const SizedBox(width: 12),
+                _StatCard(title: 'Products', value: productCount.toString()),
+                const SizedBox(width: 12),
+                _StatCard(title: 'Orders', value: orderCount.toString()),
               ],
             ),
 
             const SizedBox(height: 32),
-
             /* ===================== QUICK ACTIONS ===================== */
             const Text(
               'Quick Actions',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-
             GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -57,42 +100,48 @@ class AdminDashboard extends StatelessWidget {
                   icon: Icons.people,
                   label: 'Manage Users',
                   onTap: () {
-                    // Navigator.pushNamed(context, ManageUsersScreen.routeName);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageUsersScreen(),
+                      ),
+                    );
                   },
                 ),
                 _ActionCard(
                   icon: Icons.shopping_bag,
                   label: 'Manage Products',
                   onTap: () {
-                    // Navigator.pushNamed(context, ManageProductsScreen.routeName);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageProductsScreen(),
+                      ),
+                    );
                   },
                 ),
                 _ActionCard(
                   icon: Icons.receipt_long,
                   label: 'View Orders',
                   onTap: () {
-                    // Navigator.pushNamed(context, ManageOrdersScreen.routeName);
-                  },
-                ),
-                _ActionCard(
-                  icon: Icons.analytics,
-                  label: 'Reports',
-                  onTap: () {
-                    // Navigator.pushNamed(context, ReportsScreen.routeName);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageOrdersScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
             ),
 
             const SizedBox(height: 32),
-
             /* ===================== MORE OPTIONS ===================== */
             const Text(
               'More Options',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-
             Card(
               elevation: 0.5,
               child: Column(
@@ -101,7 +150,12 @@ class AdminDashboard extends StatelessWidget {
                     icon: Icons.help_outline,
                     title: 'Help & Support',
                     onTap: () {
-                      // Navigator.pushNamed(context, HelpScreen.routeName);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HelpSupportScreen(),
+                        ),
+                      );
                     },
                   ),
                   const Divider(height: 1),
@@ -109,7 +163,12 @@ class AdminDashboard extends StatelessWidget {
                     icon: Icons.privacy_tip_outlined,
                     title: 'Privacy Policy',
                     onTap: () {
-                      // Navigator.pushNamed(context, PrivacyPolicyScreen.routeName);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      );
                     },
                   ),
                   const Divider(height: 1),
@@ -117,7 +176,12 @@ class AdminDashboard extends StatelessWidget {
                     icon: Icons.settings_outlined,
                     title: 'Settings',
                     onTap: () {
-                      // Navigator.pushNamed(context, SettingsScreen.routeName);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -132,10 +196,7 @@ class AdminDashboard extends StatelessWidget {
 
 /* ===================== STAT CARD ===================== */
 class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.title,
-    required this.value,
-  });
+  const _StatCard({required this.title, required this.value});
 
   final String title;
   final String value;
@@ -157,12 +218,7 @@ class _StatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                ),
-              ),
+              Text(title, style: TextStyle(color: Colors.grey.shade600)),
             ],
           ),
         ),
@@ -195,10 +251,7 @@ class _ActionCard extends StatelessWidget {
           children: [
             Icon(icon, size: 32),
             const SizedBox(height: 12),
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
       ),

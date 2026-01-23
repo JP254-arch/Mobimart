@@ -1,6 +1,8 @@
 // lib/features/dashboard/screens/user_dashboard.dart
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mobimart_app/features/orders/screens/order_screen.dart';
 import 'package:mobimart_app/features/screens/cart_screen.dart';
 import 'package:mobimart_app/features/screens/help_support_screen.dart';
@@ -8,21 +10,92 @@ import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
 import 'package:mobimart_app/features/screens/settings_screen.dart';
 import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 
-class UserDashboard extends StatelessWidget {
+class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
-
   static const String routeName = '/user-dashboard';
 
-  // Mock user data
-  final String userName = "John Doe";
-  final String userEmail = "johndoe@example.com";
-  final String userPhone = "+254700000000";
+  @override
+  State<UserDashboard> createState() => _UserDashboardState();
+}
 
-  // Mock stats data
-  final int totalOrders = 12;
-  final int pendingOrders = 3;
-  final double totalSpent = 24500.0;
-  final int wishlistCount = 5;
+class _UserDashboardState extends State<UserDashboard> {
+  final user = FirebaseAuth.instance.currentUser;
+
+  int totalOrders = 0;
+  int pendingOrders = 0;
+  double totalSpent = 0.0;
+  int wishlistCount = 0;
+
+  String userName = '';
+  String userEmail = '';
+  String userPhone = '';
+  String? userPhotoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+    _fetchStats();
+  }
+
+  Future<void> _fetchUserData() async {
+    if (user == null) return;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        if (!mounted) return;
+        setState(() {
+          userName = data['name'] ?? '';
+          userEmail = data['email'] ?? user!.email ?? '';
+          userPhone = data['phone'] ?? '';
+          userPhotoUrl = data['photoUrl'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data: $e');
+    }
+  }
+
+  Future<void> _fetchStats() async {
+    if (user == null) return;
+
+    try {
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: user!.uid)
+          .get();
+
+      final wishlistSnapshot = await FirebaseFirestore.instance
+          .collection('wishlist')
+          .where('userId', isEqualTo: user!.uid)
+          .get();
+
+      int pending = 0;
+      double spent = 0.0;
+
+      for (var order in ordersSnapshot.docs) {
+        final orderData = order.data();
+        if (orderData['status'] == 'pending') pending++;
+        spent += (orderData['total'] ?? 0).toDouble();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        totalOrders = ordersSnapshot.docs.length;
+        pendingOrders = pending;
+        totalSpent = spent;
+        wishlistCount = wishlistSnapshot.docs.length;
+      });
+    } catch (e) {
+      debugPrint('Error fetching stats: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,20 +123,27 @@ class UserDashboard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: const AssetImage('assets/images/user_placeholder.png'),
+                    backgroundImage: (userPhotoUrl != null && userPhotoUrl!.isNotEmpty)
+                        ? NetworkImage(userPhotoUrl!)
+                        : const AssetImage('assets/images/user_placeholder.png') as ImageProvider,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    userName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    userName.isNotEmpty ? userName : 'Loading...',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 4),
-                  Text(userEmail, style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    userEmail.isNotEmpty ? userEmail : '-',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 4),
-                  Text(userPhone, style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    userPhone.isNotEmpty ? userPhone : '-',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: () {
@@ -80,37 +160,45 @@ class UserDashboard extends StatelessWidget {
 
             // ================= Stats Cards =================
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatCard(
-                  context,
-                  title: 'Total Orders',
-                  value: totalOrders.toString(),
-                  color: Colors.blue,
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    title: 'Total Orders',
+                    value: totalOrders.toString(),
+                    color: Colors.blue,
+                  ),
                 ),
-                _buildStatCard(
-                  context,
-                  title: 'Pending',
-                  value: pendingOrders.toString(),
-                  color: Colors.orange,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    title: 'Pending',
+                    value: pendingOrders.toString(),
+                    color: Colors.orange,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatCard(
-                  context,
-                  title: 'Total Spent',
-                  value: 'KSh ${totalSpent.toStringAsFixed(0)}',
-                  color: Colors.green,
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    title: 'Total Spent',
+                    value: 'KSh ${totalSpent.toStringAsFixed(0)}',
+                    color: Colors.green,
+                  ),
                 ),
-                _buildStatCard(
-                  context,
-                  title: 'Wishlist',
-                  value: wishlistCount.toString(),
-                  color: Colors.pink,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    title: 'Wishlist',
+                    value: wishlistCount.toString(),
+                    color: Colors.pink,
+                  ),
                 ),
               ],
             ),
@@ -123,58 +211,47 @@ class UserDashboard extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const SizedBox(height: 12),
-
-            GridView(
+            GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.2,
-              ),
               children: [
                 _buildActionCard(
                   context,
                   title: 'Profile',
                   icon: Icons.person_outline,
                   color: Colors.blueAccent,
-                  onTap: () {
-                    Navigator.pushNamed(context, SettingsScreen.routeName);
-                  },
+                  onTap: () => Navigator.pushNamed(context, SettingsScreen.routeName),
                 ),
                 _buildActionCard(
                   context,
                   title: 'Orders',
                   icon: Icons.shopping_bag_outlined,
                   color: Colors.orangeAccent,
-                  onTap: () {
-                    Navigator.pushNamed(context, OrdersScreen.routeName);
-                  },
+                  onTap: () => Navigator.pushNamed(context, OrdersScreen.routeName),
                 ),
                 _buildActionCard(
                   context,
                   title: 'Wishlist',
                   icon: Icons.favorite_border,
                   color: Colors.pinkAccent,
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const WishlistScreen()));
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WishlistScreen()),
+                  ),
                 ),
                 _buildActionCard(
                   context,
                   title: 'Cart',
                   icon: Icons.shopping_cart_outlined,
                   color: Colors.greenAccent,
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CartScreen()));
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  ),
                 ),
               ],
             ),
@@ -191,37 +268,27 @@ class UserDashboard extends StatelessWidget {
               context,
               icon: Icons.help_outline,
               title: 'Help & Support',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const HelpSupportScreen(),
-                  ),
-                );
-              },
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+              ),
             ),
             const Divider(),
             _buildOptionTile(
               context,
               icon: Icons.privacy_tip_outlined,
               title: 'Privacy Policy',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PrivacyPolicyScreen(),
-                  ),
-                );
-              },
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              ),
             ),
             const Divider(),
             _buildOptionTile(
               context,
               icon: Icons.settings,
               title: 'Settings',
-              onTap: () {
-                Navigator.pushNamed(context, SettingsScreen.routeName);
-              },
+              onTap: () => Navigator.pushNamed(context, SettingsScreen.routeName),
             ),
           ],
         ),
@@ -230,43 +297,46 @@ class UserDashboard extends StatelessWidget {
   }
 
   // ================= Helper: Stats Card =================
-  Widget _buildStatCard(BuildContext context,
-      {required String title, required String value, required Color color}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+  Widget _buildStatCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+        ],
       ),
     );
   }
 
   // ================= Helper: Action Card =================
-  Widget _buildActionCard(BuildContext context,
-      {required String title,
-      required IconData icon,
-      required Color color,
-      required VoidCallback onTap}) {
+  Widget _buildActionCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -283,7 +353,10 @@ class UserDashboard extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: color),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -292,8 +365,12 @@ class UserDashboard extends StatelessWidget {
   }
 
   // ================= Helper: Extra Option Tile =================
-  Widget _buildOptionTile(BuildContext context,
-      {required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildOptionTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),

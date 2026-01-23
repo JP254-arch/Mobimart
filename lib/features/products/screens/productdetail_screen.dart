@@ -5,7 +5,7 @@ import '../../cart/providers/cart_provider.dart';
 import '../../../core/widgets/primary_button.dart';
 
 class ProductDetailScreen extends StatelessWidget {
-  final Product product;
+  final ProductModel product; // <-- use ProductModel instead of Product
 
   const ProductDetailScreen({super.key, required this.product});
 
@@ -18,35 +18,48 @@ class ProductDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.network(
-              product.imageUrl,
-              width: double.infinity,
-              height: 250,
-              fit: BoxFit.cover,
+            /* Product Image */
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: product.imageUrl.isNotEmpty
+                  ? Image.network(
+                      product.imageUrl,
+                      width: double.infinity,
+                      height: 250,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.image, size: 50),
+                    )
+                  : const Icon(Icons.image, size: 50),
             ),
             const SizedBox(height: 16),
+
+            /* Product Name */
             Text(
               product.name,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
+
+            /* Product Price */
             Text(
-              '\$${product.price.toStringAsFixed(2)}',
+              'KSh ${product.price.toStringAsFixed(2)}',
               style: const TextStyle(fontSize: 20, color: Colors.green),
             ),
             const SizedBox(height: 16),
-            Text(
-              product.description,
-              style: const TextStyle(fontSize: 16),
-            ),
+
+            /* Product Description */
+            Text(product.description, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 24),
+
+            /* Add to Cart Button */
             PrimaryButton(
               text: 'Add to Cart',
               onPressed: () {
                 // Add product using the current CartProvider
                 context.read<CartProvider>().addItem(product.id);
 
-                // Optional: show a snackbar confirmation
+                // Show a snackbar confirmation
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${product.name} added to cart')),
                 );

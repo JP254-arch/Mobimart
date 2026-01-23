@@ -1,44 +1,16 @@
-// lib/features/wishlist/screens/wishlist_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
+import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/features/screens/product_detail_screen.dart';
+import 'package:provider/provider.dart';
 
 class WishlistScreen extends StatelessWidget {
   const WishlistScreen({super.key});
 
-  // Mock wishlist products
-  List<ProductModel> get mockWishlist => [
-        ProductModel(
-          id: '1',
-          name: 'Mobimart Sneakers',
-          imageUrl: 'assets/images/banners/banner1.png',
-          price: 3500,
-          category: 'Shoes',
-          description: 'Comfortable running sneakers for daily use.',
-        ),
-        ProductModel(
-          id: '2',
-          name: 'Mobimart Backpack',
-          imageUrl: 'assets/images/banners/banner2.png',
-          price: 2500,
-          category: 'Bags',
-          description: 'Spacious backpack with multiple compartments.',
-        ),
-        ProductModel(
-          id: '3',
-          name: 'Mobimart Headphones',
-          imageUrl: 'assets/images/banners/banner3.png',
-          price: 1800,
-          category: 'Electronics',
-          description: 'High-quality wireless headphones with bass boost.',
-        ),
-      ];
+  static const String routeName = '/wishlist';
 
   @override
   Widget build(BuildContext context) {
-    final wishlist = mockWishlist;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Mobimart Wishlist"),
@@ -46,54 +18,62 @@ class WishlistScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          children: [
-            // SEARCH BAR
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Search wishlist...",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                // FIXED: Replace deprecated withOpacity
-                fillColor: Theme.of(context).cardColor.withAlpha((0.1 * 255).toInt()),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+        child: Consumer<UserProvider>(
+          builder: (context, userProvider, _) {
+            final wishlist = userProvider.wishlist;
 
-            // EMPTY STATE
-            if (wishlist.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Text(
-                    "Your Mobimart wishlist is empty.",
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    textAlign: TextAlign.center,
+            return Column(
+              children: [
+                // ================= SEARCH BAR =================
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: "Search wishlist...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Theme.of(context)
+                        .cardColor
+                        .withValues(alpha: 0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
 
-            // WISHLIST GRID
-            if (wishlist.isNotEmpty)
-              Expanded(
-                child: GridView.builder(
-                  itemCount: wishlist.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.70,
+                // ================= EMPTY STATE =================
+                if (wishlist.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        "Your Mobimart wishlist is empty.",
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
-                  itemBuilder: (context, index) {
-                    final product = wishlist[index];
-                    return WishlistProductCard(product: product);
-                  },
-                ),
-              ),
-          ],
+
+                // ================= WISHLIST GRID =================
+                if (wishlist.isNotEmpty)
+                  Expanded(
+                    child: GridView.builder(
+                      itemCount: wishlist.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 0.70,
+                      ),
+                      itemBuilder: (context, index) {
+                        final product = wishlist[index];
+                        return WishlistProductCard(product: product);
+                      },
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -104,16 +84,19 @@ class WishlistScreen extends StatelessWidget {
 class WishlistProductCard extends StatelessWidget {
   final ProductModel product;
 
-  const WishlistProductCard({super.key, required this.product});
+  const WishlistProductCard({
+    super.key,
+    required this.product,
+  });
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final userProvider = context.read<UserProvider>();
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Navigate to Product Details
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -128,8 +111,7 @@ class WishlistProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              // FIXED: Replace deprecated withOpacity
-              color: Colors.black.withAlpha((0.05 * 255).toInt()),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -174,21 +156,30 @@ class WishlistProductCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // REMOVE BUTTON
                 IconButton(
                   onPressed: () {
-                    // TODO: Remove from wishlist logic
+                    userProvider.removeFromWishlist(product.id);
                   },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
                   iconSize: 20,
                 ),
-
-                // ADD TO CART BUTTON
                 IconButton(
                   onPressed: () {
-                    // TODO: Add to cart logic
+                    userProvider.addToCart(product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} added to cart'),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
                   },
-                  icon: const Icon(Icons.shopping_cart_outlined, color: Colors.green),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.green,
+                  ),
                   iconSize: 20,
                 ),
               ],

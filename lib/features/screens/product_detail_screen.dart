@@ -1,7 +1,11 @@
 // lib/features/product/screens/product_details_page.dart
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
+import 'package:mobimart_app/features/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 class ProductDetailsPage extends StatelessWidget {
   final ProductModel product;
@@ -69,21 +73,26 @@ class ProductDetailsPage extends StatelessWidget {
                     /* Product Image */
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        product.imageUrl,
-                        width: double.infinity,
-                        height: 250,
-                        fit: BoxFit.cover,
-                      ),
+                      child: product.imageUrl.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl,
+                              width: double.infinity,
+                              height: 250,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.image, size: 50),
+                            )
+                          : const Icon(Icons.image, size: 50),
                     ),
                     const SizedBox(height: 16),
 
                     /* Product Name */
                     Text(
                       product.name,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
 
@@ -91,7 +100,12 @@ class ProductDetailsPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.8),
+                        color: Color.fromRGBO(
+                          primaryColor.red,
+                          primaryColor.green,
+                          primaryColor.blue,
+                          0.8, // opacity between 0.0 and 1.0
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -140,7 +154,20 @@ class ProductDetailsPage extends StatelessWidget {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // TODO: Add product to cart logic
+                  // Access the provider
+                  final userProvider =
+                      Provider.of<UserProvider>(context, listen: false);
+
+                  // Add product to cart
+                  userProvider.addToCart(product);
+
+                  // Show confirmation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${product.name} added to cart'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.shopping_cart),
                 label: const Text("Add to Cart"),

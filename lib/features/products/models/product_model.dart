@@ -1,42 +1,57 @@
-// lib/features/orders/models/product_model.dart
+// lib/features/admin/models/product_model.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductModel {
   final String id;
   final String name;
-  final String imageUrl;
-  final double price;
-  final String category;
   final String description;
+  final String category;
+  final double price;
+  final String imageUrl;
 
   ProductModel({
     required this.id,
     required this.name,
-    required this.imageUrl,
-    required this.price,
-    required this.category,
     required this.description,
+    required this.category,
+    required this.price,
+    required this.imageUrl,
   });
 
-  // Convert from Map (Firestore or mock data)
+  // ================== From Firestore Document ==================
+  factory ProductModel.fromDocument(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return ProductModel(
+      id: doc.id,
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      category: data['category'] ?? '',
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: data['imageUrl'] ?? '',
+    );
+  }
+
+  // ================== From Map (optional) ==================
   factory ProductModel.fromMap(Map<String, dynamic> map, String id) {
     return ProductModel(
       id: id,
       name: map['name'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
-      price: (map['price'] as num?)?.toDouble() ?? 0.0,
-      category: map['category'] ?? '',
       description: map['description'] ?? '',
+      category: map['category'] ?? '',
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: map['imageUrl'] ?? '',
     );
   }
 
-  // Convert to Map (for Firestore or storage)
+  // ================== To Map ==================
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'imageUrl': imageUrl,
-      'price': price,
-      'category': category,
       'description': description,
+      'category': category,
+      'price': price,
+      'imageUrl': imageUrl,
     };
   }
 }

@@ -1,87 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:mobimart_app/features/models/product_model.dart';
-import 'package:mobimart_app/features/orders/models/order_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mobimart_app/features/orders/models/order_model.dart' as order_model;
 
 class OrdersScreen extends StatelessWidget {
-  const OrdersScreen({super.key});
+  OrdersScreen({super.key}); // non-const due to dynamic content
 
-  static const String routeName = '/orders';
+  final CollectionReference ordersCollection =
+      FirebaseFirestore.instance.collection('orders');
 
-  // ================= MOCK DATA =================
-  List<Order> get mockOrders => [
-        Order(
-          id: 'ORD001',
-          items: [
-            ProductModel(
-              id: '1',
-              name: 'Mobimart Sneakers',
-              imageUrl: 'assets/images/banners/banner1.png',
-              price: 3500,
-              category: 'Shoes',
-              description: 'Comfortable running sneakers',
-            ),
-          ],
-          total: 3500,
-          date: DateTime.now().subtract(const Duration(days: 1)),
-          status: 'Delivered',
-        ),
-        Order(
-          id: 'ORD002',
-          items: [
-            ProductModel(
-              id: '2',
-              name: 'Mobimart Backpack',
-              imageUrl: 'assets/images/banners/banner2.png',
-              price: 2500,
-              category: 'Bags',
-              description: 'Spacious backpack',
-            ),
-            ProductModel(
-              id: '3',
-              name: 'Mobimart Headphones',
-              imageUrl: 'assets/images/banners/banner3.png',
-              price: 1800,
-              category: 'Electronics',
-              description: 'Wireless headphones',
-            ),
-          ],
-          total: 4300,
-          date: DateTime.now().subtract(const Duration(days: 3)),
-          status: 'Shipped',
-        ),
-      ];
+  static const String routeName = '/orders'; // give a proper route name
 
   @override
   Widget build(BuildContext context) {
-    final orders = mockOrders;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Orders'),
-        centerTitle: true,
+      appBar: AppBar(title: const Text('My Orders'), centerTitle: true),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: ordersCollection.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('Something went wrong'));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final List<QueryDocumentSnapshot> orderDocs = snapshot.data?.docs ?? [];
+
+          if (orderDocs.isEmpty) {
+            return const Center(child: Text('You have no orders yet'));
+          }
+
+          final List<order_model.Order> orders = orderDocs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return order_model.Order.fromMap(data, doc.id);
+          }).toList();
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            itemBuilder: (context, index) => OrderCard(order: orders[index]),
+          );
+        },
       ),
-      body: orders.isEmpty
-          ? const Center(child: Text('You have no orders yet'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                return OrderCard(order: orders[index]);
-              },
-            ),
     );
   }
 }
 
-/* ================= ORDER CARD ================= */
-
 class OrderCard extends StatelessWidget {
-  final Order order;
+  final order_model.Order order;
 
   const OrderCard({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
+    Color statusColor;
+    switch (order.status) {
+      case 'Delivered':
+        statusColor = Colors.green;
+        break;
+      case 'Shipped':
+        statusColor = Colors.orange;
+        break;
+      default:
+        statusColor = Colors.blue;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -90,7 +74,7 @@ class OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((0.05 * 255).round()), // replaces deprecated withOpacity
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -99,7 +83,7 @@ class OrderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HEADER
+          /* Header Row */
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -109,27 +93,18 @@ class OrderCard extends StatelessWidget {
               ),
               Text(
                 order.status,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: order.status == 'Delivered'
-                      ? Colors.green
-                      : order.status == 'Shipped'
-                          ? Colors.orange
-                          : Colors.blue,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, color: statusColor),
               ),
             ],
           ),
-
           const SizedBox(height: 6),
+          /* Date */
           Text(
             'Date: ${order.date.toLocal().toString().split(' ')[0]}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
-
           const Divider(height: 24),
-
-          // ITEMS
+          /* Items */
           ...order.items.map(
             (item) => Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,10 +120,8 @@ class OrderCard extends StatelessWidget {
               ],
             ),
           ),
-
           const Divider(height: 24),
-
-          // TOTAL
+          /* Total */
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

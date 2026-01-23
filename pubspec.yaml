@@ -9,7 +9,9 @@ environment:
 
 dependencies:
   image_picker: ^1.0.7
+  firebase_storage: ^11.6.0
   shared_preferences: ^2.2.2
+  http: ^1.1.0
 
   flutter:
     sdk: flutter
@@ -40,6 +42,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/mobimart.png
+    - assets/images/user_placeholder.png
     - assets/icons/app_icon.png
 
 flutter_icons:

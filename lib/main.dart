@@ -44,11 +44,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
+        // Ensure non-null value for theme
+        final isDark = themeProvider.isDarkTheme ?? false;
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Mobimart',
           theme: Styles.themeData(
-            isDarkTheme: themeProvider.isDarkTheme ?? false,
+            isDarkTheme: isDark,
             context: context,
           ),
 
@@ -72,10 +75,10 @@ class MyApp extends StatelessWidget {
 
           // ================= ROUTES =================
           routes: {
-            RegisterScreen.routName: (_) => const RegisterScreen(),
+            RegisterScreen.routeName: (_) => const RegisterScreen(),
             ProfileScreen.routeName: (_) => const ProfileScreen(),
             SettingsScreen.routeName: (_) => const SettingsScreen(),
-            OrdersScreen.routeName: (_) => const OrdersScreen(),
+            OrdersScreen.routeName: (_) => OrdersScreen(),
             HelpSupportScreen.routeName: (_) => const HelpSupportScreen(),
             PrivacyPolicyScreen.routeName: (_) => const PrivacyPolicyScreen(),
             UserDashboard.routeName: (_) => const UserDashboard(),

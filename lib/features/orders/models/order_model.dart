@@ -1,5 +1,6 @@
 // lib/features/orders/models/order_model.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 
 class Order {
@@ -17,25 +18,27 @@ class Order {
     this.status = 'Pending',
   });
 
-  // Convert from Map (Firestore or mock data)
+  // Convert from Map (Firestore)
   factory Order.fromMap(Map<String, dynamic> data, String id) {
+    // Firestore stores date as Timestamp
+    final Timestamp? timestamp = data['date'] as Timestamp?;
     return Order(
       id: id,
-      items: (data['items'] as List<dynamic>)
-          .map((item) => ProductModel.fromMap(item, item['id'] ?? ''))
+      items: (data['items'] as List<dynamic>? ?? [])
+          .map((item) => ProductModel.fromMap(item as Map<String, dynamic>, item['id'] ?? ''))
           .toList(),
       total: (data['total'] as num?)?.toDouble() ?? 0.0,
-      date: (data['date'] as DateTime?) ?? DateTime.now(),
+      date: timestamp?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'Pending',
     );
   }
 
-  // Convert to Map (for Firestore or storage)
+  // Convert to Map (for Firestore)
   Map<String, dynamic> toMap() {
     return {
       'items': items.map((item) => item.toMap()).toList(),
       'total': total,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date),
       'status': status,
     };
   }

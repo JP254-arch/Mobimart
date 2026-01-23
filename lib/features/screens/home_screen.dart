@@ -1,8 +1,7 @@
 // lib/features/home/screens/home_screen.dart
 
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/core/theme/theme_provider.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/screens/product_detail_screen.dart';
@@ -11,54 +10,13 @@ import 'package:provider/provider.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  // Mock product list
-  List<ProductModel> get mockProducts => [
-        ProductModel(
-          id: '1',
-          name: 'Mobimart Sneakers',
-          imageUrl: 'assets/images/banners/banner1.png',
-          price: 3500,
-          category: 'Shoes',
-          description: 'Comfortable running sneakers for daily use.',
-        ),
-        ProductModel(
-          id: '2',
-          name: 'Mobimart Backpack',
-          imageUrl: 'assets/images/banners/banner2.png',
-          price: 2500,
-          category: 'Bags',
-          description: 'Spacious backpack with multiple compartments.',
-        ),
-        ProductModel(
-          id: '3',
-          name: 'Mobimart Headphones',
-          imageUrl: 'assets/images/banners/banner3.png',
-          price: 1800,
-          category: 'Electronics',
-          description: 'High-quality wireless headphones with bass boost.',
-        ),
-        ProductModel(
-          id: '4',
-          name: 'Mobimart Watch',
-          imageUrl: 'assets/images/banners/banner4.png',
-          price: 5000,
-          category: 'Accessories',
-          description: 'Stylish wristwatch with leather strap.',
-        ),
-        ProductModel(
-          id: '5',
-          name: 'Mobimart Jacket',
-          imageUrl: 'assets/images/banners/banner5.png',
-          price: 4200,
-          category: 'Clothing',
-          description: 'Warm and comfortable jacket for all seasons.',
-        ),
-      ];
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.getIsDarkTHeme ?? false;
+
+    final CollectionReference productsCollection = FirebaseFirestore.instance
+        .collection('products');
 
     return Scaffold(
       body: SafeArea(
@@ -74,8 +32,8 @@ class HomeScreen extends StatelessWidget {
                   Text(
                     "Mobimart",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
@@ -117,33 +75,59 @@ class HomeScreen extends StatelessWidget {
               // SECTION TITLE
               Text(
                 "Popular Products",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
 
-              // PRODUCT GRID
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: mockProducts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.70,
-                ),
-                itemBuilder: (context, index) {
-                  final product = mockProducts[index];
-                  return ProductCard(
-                    product: product,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProductDetailsPage(product: product),
+              // PRODUCT GRID: Firestore
+              StreamBuilder<QuerySnapshot>(
+                stream: productsCollection.snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(child: Text('Something went wrong'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final productDocs = snapshot.data?.docs ?? [];
+
+                  if (productDocs.isEmpty) {
+                    return const Center(child: Text('No products found'));
+                  }
+
+                  final products = productDocs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return ProductModel.fromMap(data, doc.id);
+                  }).toList();
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: products.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.70,
                         ),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ProductDetailsPage(product: product),
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -191,11 +175,15 @@ class ProductCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  product.imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
+                child: product.imageUrl.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image, size: 50),
+                      )
+                    : const Icon(Icons.image, size: 50),
               ),
             ),
             const SizedBox(height: 8),

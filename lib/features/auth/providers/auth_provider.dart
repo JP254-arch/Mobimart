@@ -3,92 +3,119 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/user_model.dart';
 
-class UserProvider with ChangeNotifier {
+class AuthProvider with ChangeNotifier {
   UserModel? _user;
 
-  UserModel? get getUser {
-    return _user;
-  }
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  bool get isLoggedIn {
-    return _user != null;
-  }
+  /// ================= GETTERS =================
+  UserModel? get currentUser => _user;
+  bool get isLoggedIn => _user != null;
+  bool get isAdmin => _user?.isAdmin ?? false;
 
-  String get role {
-    return _user?.role ?? 'guest';
-  }
-
+  /// ================= FETCH USER =================
   Future<void> fetchUser() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) {
       _user = null;
       notifyListeners();
       return;
     }
 
     try {
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('customers')
-          .doc(currentUser.uid)
-          .get();
-
-      if (docSnapshot.exists && docSnapshot.data() != null) {
-        _user = UserModel.fromDocument(
-          currentUser.uid,
-          docSnapshot.data() as Map<String, dynamic>,
-        );
-      } else {
-        _user = UserModel(
-          uid: currentUser.uid,
-          username: currentUser.displayName ?? '',
-          email: currentUser.email ?? '',
-          role: 'customer',
-          userCart: [],
-          userWish: [],
-          userImage: '',
-          createdAt: Timestamp.now(),
-        );
+      final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+      if (doc.exists) {
+        _user = UserModel.fromFirestore(doc);
       }
       notifyListeners();
     } catch (e) {
-      debugPrint("Error fetching user: $e");
+      debugPrint('Error fetching user: $e');
       rethrow;
     }
   }
 
-  Future<String?> login(String email, String password) async {
+  /// ================= REGISTER =================
+  Future<String?> register({
+    required String name,
+    required String email,
+    required String password,
+    String role = 'user',
+    String? photoUrl,
+  }) async {
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-          final user = userCredential.user;
-      // fetch Firestore user after login
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      if (user == null) {
-        return "login failed please try again";
-      }
-      if (!user.emailVerified ) {
-        await FirebaseAuth.instance.signOut();
-        return "Please verify your email before logging in.";
-      }
-      await fetchUser();
+      final userModel = UserModel(
+        uid: cred.user!.uid,
+        name: name,
+        email: email,
+        role: role,
+        photoUrl: photoUrl,
+        isActive: true,
+        wishlist: [],
+        cart: [],
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      );
+
+      await _firestore
+          .collection('users')
+          .doc(cred.user!.uid)
+          .set(userModel.toFirestore());
+
+      _user = userModel;
+      notifyListeners();
+
+      // Send email verification
+      await cred.user!.sendEmailVerification();
+
       return null;
     } on FirebaseAuthException catch (e) {
-      return e.message ?? "Login failed";
+      return e.message ?? 'Registration failed';
     } catch (e) {
-      return e.toString();
+      return 'Registration failed: $e';
     }
   }
 
+  /// ================= LOGIN =================
+  Future<String?> login(String email, String password) async {
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = cred.user;
+      if (user == null) return 'Login failed';
+
+      if (!user.emailVerified) {
+        await _auth.signOut();
+        return 'Please verify your email before logging in.';
+      }
+
+      await fetchUser();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'Login failed';
+    } catch (e) {
+      return 'Login failed: $e';
+    }
+  }
+
+  /// ================= SET USER =================
   void setUser(UserModel user) {
     _user = user;
     notifyListeners();
   }
 
-  void clearUser() {
+  /// ================= LOGOUT =================
+  Future<void> logout() async {
+    await _auth.signOut();
     _user = null;
     notifyListeners();
   }
-
-  bool get isAdmin => _user?.role == 'admin';
-  bool get isRegularUser => _user?.role == 'customer';
 }

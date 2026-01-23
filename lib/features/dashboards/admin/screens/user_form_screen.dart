@@ -1,4 +1,7 @@
+// lib/features/admin/screens/user_form_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserFormScreen extends StatefulWidget {
   const UserFormScreen({
@@ -18,6 +21,8 @@ class UserFormScreen extends StatefulWidget {
 
 class _UserFormScreenState extends State<UserFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  final CollectionReference usersCollection =
+      FirebaseFirestore.instance.collection('users');
 
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
@@ -45,28 +50,43 @@ class _UserFormScreenState extends State<UserFormScreen> {
     super.dispose();
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final updatedUser = {
+    final userData = {
       'name': _nameController.text.trim(),
       'email': _emailController.text.trim(),
       'phone': _phoneController.text.trim(),
     };
 
-    // TODO: Connect to Firestore / API
-    // if (isEditMode) updateUser(updatedUser);
-    // else createUser(updatedUser);
+    try {
+      if (isEditMode) {
+        // Update existing user
+        final userId = widget.user!['id'];
+        await usersCollection.doc(userId).update(userData);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isEditMode ? 'User updated successfully' : 'User created successfully',
-        ),
-      ),
-    );
+        if (!mounted) return; // <-- Safeguard context after async
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User updated successfully")),
+        );
+      } else {
+        // Create new user
+        await usersCollection.add(userData);
 
-    Navigator.pop(context, updatedUser);
+        if (!mounted) return; // <-- Safeguard context after async
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User created successfully")),
+        );
+      }
+
+      if (!mounted) return; // <-- Safeguard context before navigation
+      Navigator.pop(context, userData);
+    } catch (e) {
+      if (!mounted) return; // <-- Safeguard context for error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save user: $e")),
+      );
+    }
   }
 
   @override
@@ -82,6 +102,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
           key: _formKey,
           child: Column(
             children: [
+              /* Name */
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -96,6 +117,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
               ),
               const SizedBox(height: 16),
 
+              /* Email */
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
@@ -116,6 +138,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
               ),
               const SizedBox(height: 16),
 
+              /* Phone */
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
@@ -131,6 +154,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
               ),
               const SizedBox(height: 32),
 
+              /* Submit Button */
               SizedBox(
                 width: double.infinity,
                 height: 48,
