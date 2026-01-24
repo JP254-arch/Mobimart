@@ -23,10 +23,10 @@ class _CartScreenState extends State<CartScreen> {
     final cartItems = userProvider.currentUser?.cart ?? [];
 
     // Calculate total
-    double totalPrice = 0;
-    for (var item in cartItems) {
-      totalPrice += item.price * 1; // Quantity is 1 by default
-    }
+    final totalPrice = cartItems.fold<double>(
+      0,
+      (sum, item) => sum + item.price,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text("Mobimart Cart"), centerTitle: true),
@@ -73,6 +73,9 @@ class _CartScreenState extends State<CartScreen> {
                     onPressed: _isProcessingCheckout
                         ? null
                         : () async {
+                            // Cache messenger before async gap
+                            final messenger = ScaffoldMessenger.of(context);
+
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (_) => AlertDialog(
@@ -104,10 +107,9 @@ class _CartScreenState extends State<CartScreen> {
                             try {
                               await userProvider.clearCart();
 
-                              // Ensure context is still valid before showing snackbar
                               if (!mounted) return;
 
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text(
                                     "Checkout successful! Your cart is now empty.",
@@ -116,16 +118,18 @@ class _CartScreenState extends State<CartScreen> {
                               );
                             } catch (e) {
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text("Checkout failed. Error: $e"),
+                                  content:
+                                      Text("Checkout failed. Error: $e"),
                                 ),
                               );
                             } finally {
-                              if (!mounted) return;
-                              setState(() {
-                                _isProcessingCheckout = false;
-                              });
+                              if (mounted) {
+                                setState(() {
+                                  _isProcessingCheckout = false;
+                                });
+                              }
                             }
                           },
                     style: ElevatedButton.styleFrom(
@@ -155,6 +159,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 }
 
+/* ================= CART ITEM CARD ================= */
 class CartItemCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onRemove;
@@ -177,9 +182,7 @@ class CartItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(
-              13,
-            ), // Replaces deprecated withOpacity
+            color: Colors.black.withValues(alpha: 13), // replaced withOpacity
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),

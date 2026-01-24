@@ -93,7 +93,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       },
       galleryFCT: () async {
-        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.gallery,
+        );
         if (image != null) {
           _pickedImageBytes = await image.readAsBytes();
           _pickedImageName = image.name;
@@ -113,11 +115,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<String?> uploadImage(Uint8List bytes, String fileName) async {
     const cloudName = 'ddvgqblf6';
     const uploadPreset = 'mobimart';
-    final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    final url = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$cloudName/image/upload',
+    );
 
     final request = http.MultipartRequest('POST', url);
     request.fields['upload_preset'] = uploadPreset;
-    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: fileName));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', bytes, filename: fileName),
+    );
 
     final response = await request.send();
     if (response.statusCode == 200) {
@@ -135,8 +141,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     FocusScope.of(context).unfocus();
 
     if (_pickedImageBytes == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Please select a profile image')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a profile image')),
+      );
       return;
     }
 
@@ -144,13 +151,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       // 1️⃣ Create Firebase auth user
-      final userCred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final userCred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       // 2️⃣ Upload profile image
-      _uploadedImageUrl = await uploadImage(
+      _uploadedImageUrl =
+          await uploadImage(
             _pickedImageBytes!,
             _pickedImageName ?? 'profile.jpg',
           ) ??
@@ -183,7 +192,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // 5️⃣ Update Provider
       if (mounted) {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
-        userProvider.setUser(newUser);
+        userProvider.setCurrentUser(newUser); // <-- updated method
       }
 
       // 6️⃣ Send email verification
@@ -193,16 +202,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Registered! Please verify your email before logging in.'),
+            content: Text(
+              'Registered! Please verify your email before logging in.',
+            ),
           ),
         );
-
-        Navigator.pushReplacementNamed(context, LoginScreen.routName);
+        Navigator.pushReplacementNamed(context, LoginScreen.routeName);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Registration failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
       }
     } finally {
       if (mounted) setState(() => isLoading = false);
@@ -223,7 +234,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 60),
-                Text("Create Account", style: Theme.of(context).textTheme.headlineLarge),
+                Text(
+                  "Create Account",
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   height: size.width * 0.3,
@@ -248,8 +262,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icon(Icons.person),
                         ),
                         validator: MyValidators.displayNamevalidator,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).requestFocus(_emailFocusNode),
+                        onFieldSubmitted: (_) => FocusScope.of(
+                          context,
+                        ).requestFocus(_emailFocusNode),
                       ),
                       const SizedBox(height: 16),
 
@@ -264,8 +279,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icon(IconlyLight.message),
                         ),
                         validator: MyValidators.emailValidator,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).requestFocus(_passwordFocusNode),
+                        onFieldSubmitted: (_) => FocusScope.of(
+                          context,
+                        ).requestFocus(_passwordFocusNode),
                       ),
                       const SizedBox(height: 16),
 
@@ -282,13 +298,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: () =>
                                 setState(() => obscureText = !obscureText),
                             icon: Icon(
-                              obscureText ? Icons.visibility : Icons.visibility_off,
+                              obscureText
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                             ),
                           ),
                         ),
                         validator: MyValidators.passwordValidator,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).requestFocus(_repeatPasswordFocusNode),
+                        onFieldSubmitted: (_) => FocusScope.of(
+                          context,
+                        ).requestFocus(_repeatPasswordFocusNode),
                       ),
                       const SizedBox(height: 16),
 
@@ -305,14 +324,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: () =>
                                 setState(() => obscureText = !obscureText),
                             icon: Icon(
-                              obscureText ? Icons.visibility : Icons.visibility_off,
+                              obscureText
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                             ),
                           ),
                         ),
-                        validator: (value) => MyValidators.repeatPasswordValidator(
-                          value: value,
-                          password: _passwordController.text,
-                        ),
+                        validator: (value) =>
+                            MyValidators.repeatPasswordValidator(
+                              value: value,
+                              password: _passwordController.text,
+                            ),
                         onFieldSubmitted: (_) => _registerUser(),
                       ),
                       const SizedBox(height: 30),

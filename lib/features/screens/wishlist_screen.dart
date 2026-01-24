@@ -1,3 +1,5 @@
+// lib/features/screens/wishlist_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
@@ -11,6 +13,8 @@ class WishlistScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Mobimart Wishlist"),
@@ -30,9 +34,7 @@ class WishlistScreen extends StatelessWidget {
                     hintText: "Search wishlist...",
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
-                    fillColor: Theme.of(context)
-                        .cardColor
-                        .withValues(alpha: 0.1),
+                    fillColor: theme.cardColor.withOpacity(0.1),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -47,7 +49,7 @@ class WishlistScreen extends StatelessWidget {
                     child: Center(
                       child: Text(
                         "Your Mobimart wishlist is empty.",
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: theme.textTheme.bodyLarge,
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -91,7 +93,8 @@ class WishlistProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
     final userProvider = context.read<UserProvider>();
 
     return InkWell(
@@ -107,11 +110,11 @@ class WishlistProductCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -124,11 +127,15 @@ class WishlistProductCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  product.imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
+                child: product.imageUrl.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image, size: 50),
+                      )
+                    : const Icon(Icons.image, size: 50),
               ),
             ),
             const SizedBox(height: 8),
@@ -138,7 +145,9 @@ class WishlistProductCard extends StatelessWidget {
               product.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 4),
 
@@ -173,6 +182,7 @@ class WishlistProductCard extends StatelessWidget {
                       SnackBar(
                         content: Text('${product.name} added to cart'),
                         duration: const Duration(seconds: 1),
+                        backgroundColor: theme.colorScheme.secondary,
                       ),
                     );
                   },

@@ -44,6 +44,8 @@ flutter:
     - assets/images/mobimart.png
     - assets/images/user_placeholder.png
     - assets/icons/app_icon.png
+    - assets/images/banners/
+
 
 flutter_icons:
   android: true

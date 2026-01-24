@@ -18,11 +18,18 @@ class UserProvider with ChangeNotifier {
   /// ================= GETTERS =================
   UserModel? get currentUser => _user;
   bool get isLoggedIn => _user != null;
-  bool get isAdmin => _user?.isAdmin ?? false;
-  bool get isRegularUser => _user?.isUser ?? false;
+  bool get isAdmin => _user?.role == 'admin';
+  bool get isRegularUser => _user?.role == 'user';
 
   List<ProductModel> get wishlist => _user?.wishlist ?? [];
   List<ProductModel> get cart => _user?.cart ?? [];
+
+  /// ================= SET CURRENT USER =================
+  /// Use this after registration or login to update provider state
+  void setCurrentUser(UserModel user) {
+    _user = user;
+    notifyListeners();
+  }
 
   /// ================= FETCH USER =================
   Future<void> fetchUser() async {
@@ -33,26 +40,36 @@ class UserProvider with ChangeNotifier {
       return;
     }
 
-    final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-    if (!doc.exists) return;
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+      if (!doc.exists) return;
 
-    _user = UserModel.fromFirestore(doc);
-    notifyListeners();
+      _user = UserModel.fromFirestore(doc);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
+    }
   }
 
   /// ================= LOGIN =================
-  /// Returns null if successful, otherwise error message
+  /// Returns null if successful, otherwise an error message
   Future<String?> login(String email, String password) async {
     try {
       final cred = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final doc = await _firestore
+          .collection('users')
+          .doc(cred.user!.uid)
+          .get();
 
-      final userDoc = await _firestore.collection('users').doc(cred.user!.uid).get();
-      if (!userDoc.exists) return 'User not found';
+      if (!doc.exists) return 'User not found';
 
-      _user = UserModel.fromFirestore(userDoc);
+      _user = UserModel.fromFirestore(doc);
       notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
@@ -80,16 +97,21 @@ class UserProvider with ChangeNotifier {
         name: name,
         email: email,
         phone: phone,
-        role: 'user',
+        role: 'user', // Default new user role
         isActive: true,
         wishlist: [],
         cart: [],
         createdAt: Timestamp.now(),
       );
 
-      await _firestore.collection('users').doc(user.uid).set(user.toFirestore());
-      _user = user;
-      notifyListeners();
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(user.toFirestore());
+
+      // Update provider state
+      setCurrentUser(user);
+
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
@@ -98,13 +120,14 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  /// ================= SET USER =================
-  void setUser(UserModel user) {
-    _user = user;
+  /// ================= LOGOUT =================
+  Future<void> logout() async {
+    await _auth.signOut();
+    _user = null;
     notifyListeners();
   }
 
-  /// ================= UPDATE SINGLE FIELD =================
+  /// ================= UPDATE USER FIELD =================
   Future<void> updateField(String field, String value) async {
     if (_user == null) return;
 
@@ -119,7 +142,6 @@ class UserProvider with ChangeNotifier {
       phone: field == 'phone' ? value : null,
       photoUrl: field == 'photoUrl' ? value : null,
     );
-
     notifyListeners();
   }
 
@@ -139,18 +161,10 @@ class UserProvider with ChangeNotifier {
 
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(newPassword);
-
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
     }
-  }
-
-  /// ================= LOGOUT =================
-  Future<void> logout() async {
-    await _auth.signOut();
-    _user = null;
-    notifyListeners();
   }
 
   /// ================= WISHLIST =================
@@ -160,10 +174,9 @@ class UserProvider with ChangeNotifier {
     if (!_user!.wishlist.any((p) => p.id == product.id)) {
       final updatedWishlist = [..._user!.wishlist, product];
       await _firestore.collection('users').doc(_user!.uid).update({
-        'wishlist': updatedWishlist.map((e) => e.toJson()).toList(),
+        'wishlist': updatedWishlist.map((p) => p.toJson()).toList(),
         'updatedAt': Timestamp.now(),
       });
-
       _user = _user!.copyWith(wishlist: updatedWishlist);
       notifyListeners();
     }
@@ -172,9 +185,11 @@ class UserProvider with ChangeNotifier {
   Future<void> removeFromWishlist(String productId) async {
     if (_user == null) return;
 
-    final updatedWishlist = _user!.wishlist.where((p) => p.id != productId).toList();
+    final updatedWishlist = _user!.wishlist
+        .where((p) => p.id != productId)
+        .toList();
     await _firestore.collection('users').doc(_user!.uid).update({
-      'wishlist': updatedWishlist.map((e) => e.toJson()).toList(),
+      'wishlist': updatedWishlist.map((p) => p.toJson()).toList(),
       'updatedAt': Timestamp.now(),
     });
 
@@ -189,10 +204,9 @@ class UserProvider with ChangeNotifier {
     if (!_user!.cart.any((p) => p.id == product.id)) {
       final updatedCart = [..._user!.cart, product];
       await _firestore.collection('users').doc(_user!.uid).update({
-        'cart': updatedCart.map((e) => e.toJson()).toList(),
+        'cart': updatedCart.map((p) => p.toJson()).toList(),
         'updatedAt': Timestamp.now(),
       });
-
       _user = _user!.copyWith(cart: updatedCart);
       notifyListeners();
     }
@@ -203,10 +217,9 @@ class UserProvider with ChangeNotifier {
 
     final updatedCart = _user!.cart.where((p) => p.id != productId).toList();
     await _firestore.collection('users').doc(_user!.uid).update({
-      'cart': updatedCart.map((e) => e.toJson()).toList(),
+      'cart': updatedCart.map((p) => p.toJson()).toList(),
       'updatedAt': Timestamp.now(),
     });
-
     _user = _user!.copyWith(cart: updatedCart);
     notifyListeners();
   }
@@ -223,7 +236,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= PICK & UPLOAD PROFILE PHOTO =================
+  /// ================= PROFILE PHOTO =================
   Future<String?> uploadProfilePhoto() async {
     if (_user == null) return 'User not logged in';
 
@@ -237,9 +250,9 @@ class UserProvider with ChangeNotifier {
       if (image == null) return null;
 
       final file = File(image.path);
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('users/profile_photos/${_user!.uid}.jpg');
+      final ref = FirebaseStorage.instance.ref().child(
+        'users/profile_photos/${_user!.uid}.jpg',
+      );
 
       await ref.putFile(file);
       final photoUrl = await ref.getDownloadURL();
@@ -251,7 +264,6 @@ class UserProvider with ChangeNotifier {
 
       _user = _user!.copyWith(photoUrl: photoUrl);
       notifyListeners();
-
       return null;
     } catch (e) {
       return 'Failed to upload photo';

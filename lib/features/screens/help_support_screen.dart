@@ -1,4 +1,8 @@
+// lib/features/screens/help_support_screen.dart
+
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
@@ -9,10 +13,7 @@ class HelpSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Help & Support"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Help & Support"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: ListView(
@@ -26,9 +27,7 @@ class HelpSupportScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const HelpCenterScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
                 );
               },
             ),
@@ -40,10 +39,7 @@ class HelpSupportScreen extends StatelessWidget {
               title: const Text("Privacy Policy"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  PrivacyPolicyScreen.routeName,
-                );
+                Navigator.pushNamed(context, PrivacyPolicyScreen.routeName);
               },
             ),
             const Divider(),
@@ -55,10 +51,9 @@ class HelpSupportScreen extends StatelessWidget {
               subtitle: const Text("Email or Chat"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Support feature coming soon"),
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ContactSupportForm()),
                 );
               },
             ),
@@ -70,31 +65,28 @@ class HelpSupportScreen extends StatelessWidget {
 }
 
 /* ================= HELP CENTER SCREEN ================= */
-
 class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});
 
   static const List<Map<String, String>> faqs = [
     {
       "question": "How do I place an order?",
-      "answer": "Select a product, add it to cart, and complete checkout."
+      "answer": "Select a product, add it to cart, and complete checkout.",
     },
     {
       "question": "How do I track my order?",
-      "answer": "Open Orders in your account to see tracking details."
+      "answer": "Open Orders in your account to see tracking details.",
     },
     {
       "question": "Can I cancel an order?",
-      "answer": "Yes, orders can be cancelled before shipping."
+      "answer": "Yes, orders can be cancelled before shipping.",
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Help Center"),
-      ),
+      appBar: AppBar(title: const Text("Help Center")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(
@@ -116,63 +108,164 @@ class HelpCenterScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
-            const Text(
-              "Contact Form",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            TextField(
-              decoration: InputDecoration(
-                labelText: "Your Name",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            TextField(
-              decoration: InputDecoration(
-                labelText: "Your Email",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            TextField(
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: "Your Message",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Message sent successfully (mock)"),
-                  ),
+            ListTile(
+              leading: const Icon(Icons.contact_support),
+              title: const Text("Contact Support Form"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ContactSupportForm()),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Submit"),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ================= CONTACT SUPPORT FORM ================= */
+class ContactSupportForm extends StatefulWidget {
+  const ContactSupportForm({super.key});
+
+  @override
+  State<ContactSupportForm> createState() => _ContactSupportFormState();
+}
+
+class _ContactSupportFormState extends State<ContactSupportForm> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
+  bool _isSubmitting = false;
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://formspree.io/f/xvzkvvrb'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'message': _messageController.text.trim(),
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Message sent successfully!")),
+        );
+        _formKey.currentState!.reset();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to send message. Please try again later."),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSubmitting = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Contact Support")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Your Name",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter your name' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: "Your Email",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Enter your email';
+                  }
+                  final emailRegex = RegExp(
+                    r'^[^@]+@[^@]+\.[^@]+',
+                  ); // simple validation
+                  if (!emailRegex.hasMatch(value)) return 'Enter valid email';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _messageController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: "Your Message",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter a message' : null,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitForm,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: primaryColor,
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text("Submit"),
+              ),
+            ],
+          ),
         ),
       ),
     );

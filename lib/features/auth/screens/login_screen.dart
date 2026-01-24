@@ -1,3 +1,4 @@
+// lib/features/auth/screens/login_screen.dart
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
@@ -5,14 +6,14 @@ import 'package:iconly/iconly.dart';
 import 'package:mobimart_app/constants/validator.dart';
 import 'package:mobimart_app/features/auth/screens/register_screen.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
-import 'package:mobimart_app/root_screens_screen.dart';
 import 'package:mobimart_app/widgets/loadding_manager.dart';
 import 'package:mobimart_app/widgets/subtitle_text.dart';
 import 'package:mobimart_app/widgets/title_text.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  static const routName = "/LoginScreen";
+  static const String routeName = '/login';
+
   const LoginScreen({super.key});
 
   @override
@@ -21,74 +22,63 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool obscureText = true;
+
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
 
   late final FocusNode _emailFocusNode;
   late final FocusNode _passwordFocusNode;
 
-  final _formkey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+
   @override
   void initState() {
+    super.initState();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
-    // Focus Nodes
     _emailFocusNode = FocusNode();
     _passwordFocusNode = FocusNode();
-    super.initState();
   }
 
   @override
   void dispose() {
-    if (mounted) {
-      _emailController.dispose();
-      _passwordController.dispose();
-      // Focus Nodes
-      _emailFocusNode.dispose();
-      _passwordFocusNode.dispose();
-    }
+    _emailController.dispose();
+    _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _loginFct(BuildContext context) async {
-    final isValid = _formkey.currentState!.validate();
+  Future<void> _login() async {
+    final isValid = _formKey.currentState?.validate() ?? false;
     FocusScope.of(context).unfocus();
+
     if (!isValid) return;
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    setState(() => _isLoading = true);
 
     try {
+      final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
+
       final errorMessage = await userProvider.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      if (errorMessage != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-        return;
+      if (errorMessage != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
       }
 
-      // Navigate based on role
-      final user = userProvider.currentUser;
-      if (user != null) {
-        if (user.role == 'admin') {
-          Navigator.pushReplacementNamed(context, RootScreen.routeName);
-        } else {
-          Navigator.pushReplacementNamed(context, RootScreen.routeName);
-        }
-      }
+      // IMPORTANT:
+      // No navigation here.
+      // AuthGate listens to auth changes and redirects automatically.
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -96,9 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         body: LoadngManager(
           isLoading: _isLoading,
@@ -108,17 +96,19 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 60),
-                  Text("Duka Letu"),
+                  Text(
+                    'Mobimart',
+                    style: Theme.of(context).textTheme.headlineLarge,
+                  ),
                   const SizedBox(height: 16),
                   const Align(
                     alignment: Alignment.centerLeft,
-                    child: TitlesTextWidget(label: "Welcome back!"),
+                    child: TitlesTextWidget(label: 'Welcome back!'),
                   ),
                   const SizedBox(height: 16),
                   Form(
-                    key: _formkey,
+                    key: _formKey,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         TextFormField(
                           controller: _emailController,
@@ -126,19 +116,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           textInputAction: TextInputAction.next,
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
-                            hintText: "Email address",
+                            hintText: 'Email address',
                             prefixIcon: Icon(IconlyLight.message),
                           ),
-                          onFieldSubmitted: (value) {
-                            FocusScope.of(
-                              context,
-                            ).requestFocus(_passwordFocusNode);
+                          onFieldSubmitted: (_) {
+                            FocusScope.of(context)
+                                .requestFocus(_passwordFocusNode);
                           },
-                          validator: (value) {
-                            return MyValidators.emailValidator(value);
-                          },
+                          validator: MyValidators.emailValidator,
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 16),
 
                         TextFormField(
                           controller: _passwordController,
@@ -147,131 +134,96 @@ class _LoginScreenState extends State<LoginScreen> {
                           keyboardType: TextInputType.visiblePassword,
                           obscureText: obscureText,
                           decoration: InputDecoration(
-                            hintText: "***********",
+                            hintText: '***********',
                             prefixIcon: const Icon(IconlyLight.lock),
                             suffixIcon: IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  obscureText = !obscureText;
-                                });
-                              },
                               icon: Icon(
                                 obscureText
                                     ? Icons.visibility
                                     : Icons.visibility_off,
                               ),
+                              onPressed: () {
+                                setState(() {
+                                  obscureText = !obscureText;
+                                });
+                              },
                             ),
                           ),
-                          onFieldSubmitted: (value) async {
-                            await _loginFct(context);
-                          },
-                          validator: (value) {
-                            return MyValidators.passwordValidator(value);
-                          },
+                          onFieldSubmitted: (_) => _login(),
+                          validator: MyValidators.passwordValidator,
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 16),
+
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.of(
-                                context,
-                              ).pushNamed(RegisterScreen.routeName);
+                              // Password reset can be wired later
                             },
                             child: const SubtitleTextWidget(
-                              label: "Forgot password?",
+                              label: 'Forgot password?',
                               fontStyle: FontStyle.italic,
                               textDecoration: TextDecoration.underline,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16.0),
+
+                        const SizedBox(height: 16),
+
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
+                            icon: const Icon(Icons.login),
+                            label: const Text('Login'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.all(12.0),
-                              // backgroundColor: Colors.red,
+                              padding: const EdgeInsets.all(12),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.0),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            icon: const Icon(Icons.login),
-                            label: const Text("Login"),
-                            onPressed: () async {
-                              await _loginFct(context);
-                            },
+                            onPressed: _login,
                           ),
                         ),
-                        const SizedBox(height: 16.0),
+
+                        const SizedBox(height: 16),
                         SubtitleTextWidget(
-                          label: "Or connect using".toUpperCase(),
+                          label: 'OR CONNECT USING',
                         ),
-                        const SizedBox(height: 16.0),
+                        const SizedBox(height: 16),
+
                         Row(
-                          children: [
+                          children: const [
                             Expanded(
                               child: SizedBox(
                                 height: kBottomNavigationBarHeight,
-
-                                child: Text("Coming soon"),
-                              ),
-                            ),
-
-                            SizedBox(width: 20),
-                            Expanded(
-                              child: SizedBox(
-                                height: kBottomNavigationBarHeight,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.all(12.0),
-                                    // backgroundColor: Colors.red,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                    ),
-                                  ),
-                                  child: const Text("Guest?"),
-                                  onPressed: () async {
-                                    Navigator.pushNamed(
-                                      context,
-                                      RootScreen.routeName,
-                                    );
-                                  },
-                                ),
+                                child: Center(child: Text('Coming soon')),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16.0),
-                        FittedBox(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                child: SubtitleTextWidget(
-                                  label: "Don't have an account?",
-                                ),
-                              ),
 
-                              SizedBox(
-                                child: TextButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      RegisterScreen.routeName,
-                                    );
-                                  },
-                                  child: SizedBox(
-                                    child: const SubtitleTextWidget(
-                                      label: "Create One?",
-                                      fontStyle: FontStyle.italic,
-                                      textDecoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
+                        const SizedBox(height: 16),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SubtitleTextWidget(
+                              label: "Don't have an account?",
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  RegisterScreen.routeName,
+                                );
+                              },
+                              child: const SubtitleTextWidget(
+                                label: 'Create One?',
+                                fontStyle: FontStyle.italic,
+                                textDecoration: TextDecoration.underline,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

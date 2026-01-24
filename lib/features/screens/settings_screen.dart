@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mobimart_app/core/theme/theme_provider.dart';
+import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
+import 'package:mobimart_app/features/screens/cart_screen.dart';
+import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -19,17 +21,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
     final userProvider = context.read<UserProvider>();
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text("No user logged in")),
-      );
+      return const Scaffold(body: Center(child: Text("No user logged in")));
     }
 
-    // StreamBuilder listens to the Firestore document in real-time
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -69,28 +67,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         backgroundImage: (userPhotoUrl.isNotEmpty)
                             ? NetworkImage(userPhotoUrl)
                             : const AssetImage(
-                                    'assets/images/user_placeholder.png')
-                                as ImageProvider,
+                                    'assets/images/user_placeholder.png',
+                                  )
+                                  as ImageProvider,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
                         child: InkWell(
                           onTap: () async {
-                            final error =
-                                await userProvider.uploadProfilePhoto();
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+                            final error = await userProvider
+                                .uploadProfilePhoto();
                             if (!mounted) return;
-
                             if (error != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 SnackBar(content: Text(error)),
                               );
                             }
                           },
                           child: CircleAvatar(
                             radius: 16,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
                             child: const Icon(
                               Icons.edit,
                               size: 18,
@@ -104,11 +106,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // ================= THEME =================
-                SwitchListTile(
-                  title: const Text('Dark Mode'),
-                  value: themeProvider.isDarkTheme ?? false,
-                  onChanged: (val) => themeProvider.setDarkTheme(val),
+                // ================= THEME SWITCH =================
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    return SwitchListTile(
+                      title: const Text('Dark Mode'),
+                      value: themeProvider.isDarkTheme ?? false,
+                      onChanged: (val) => themeProvider.setDarkTheme(val),
+                    );
+                  },
                 ),
                 const Divider(),
 
@@ -149,6 +155,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // ================= PASSWORD =================
                 _passwordTile(userProvider),
+                const Divider(),
+
+                // ================= QUICK NAVIGATION =================
+                const SizedBox(height: 24),
+                const Text(
+                  'Quick Navigation',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 2.0,
+                  children: [
+                    _ActionCard(
+                      icon: Icons.favorite_border,
+                      label: 'Wishlist',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WishlistScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _ActionCard(
+                      icon: Icons.shopping_cart_outlined,
+                      label: 'Cart',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -157,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ================= EDITABLE FIELD =================
+  // ================= EDITABLE TILE =================
   Widget _editableTile({
     required IconData icon,
     required String label,
@@ -175,16 +222,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Update $label',
             initialValue: value,
           );
-
           if (newValue == null) return;
-
           await onSave(newValue);
         },
       ),
     );
   }
 
-  // ================= PASSWORD =================
+  // ================= PASSWORD TILE =================
   Widget _passwordTile(UserProvider provider) {
     return ListTile(
       leading: const Icon(Icons.lock_outline),
@@ -193,6 +238,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: IconButton(
         icon: const Icon(Icons.edit),
         onPressed: () async {
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+
           final currentPassword = await _inputDialog(
             title: 'Current Password',
             obscure: true,
@@ -211,11 +258,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
 
           if (!mounted) return;
-
           if (error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(error)),
-            );
+            scaffoldMessenger.showSnackBar(SnackBar(content: Text(error)));
           }
         },
       ),
@@ -249,6 +293,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/* ===================== ACTION CARD ===================== */
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Card(
+        elevation: 1,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }
