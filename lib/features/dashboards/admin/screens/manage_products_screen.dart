@@ -14,86 +14,226 @@ class ManageProductsScreen extends StatefulWidget {
 }
 
 class _ManageProductsScreenState extends State<ManageProductsScreen> {
-  final CollectionReference productsCollection =
-      FirebaseFirestore.instance.collection('products');
+  final CollectionReference productsCollection = FirebaseFirestore.instance
+      .collection('products');
+
+  String _searchQuery = '';
+  String _selectedCategory = 'All';
+  List<String> _categories = ['All'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final snapshot = await productsCollection.get();
+    final categoriesSet = <String>{};
+    for (var doc in snapshot.docs) {
+      final category = doc['category'] ?? '';
+      if (category.isNotEmpty) categoriesSet.add(category);
+    }
+    setState(() {
+      _categories = ['All', ...categoriesSet.toList()];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Products'), centerTitle: true),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: productsCollection.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final productDocs = snapshot.data?.docs ?? [];
-
-          if (productDocs.isEmpty) {
-            return const Center(child: Text('No products found'));
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemCount: productDocs.length,
-            itemBuilder: (context, index) {
-              final product = productDocs[index];
-              final productData = {
-                'id': product.id,
-                'name': product['name'] ?? '',
-                'price': product['price']?.toDouble() ?? 0.0,
-                'category': product['category'] ?? '',
-                'description': product['description'] ?? '',
-                'imageUrl': product['imageUrl'] ?? '',
-              };
-
-              return Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
+      body: Column(
+        children: [
+          // ================= SEARCH BAR =================
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: productData['imageUrl'] != ''
-                      ? Image.network(
-                          productData['imageUrl'],
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.image, size: 50),
-                  title: Text(productData['name']),
-                  subtitle: Text(
-                    'Category: ${productData['category']}\nPrice: \$${productData['price'].toStringAsFixed(2)}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // EDIT BUTTON
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editProduct(productData),
-                      ),
-                      // DELETE BUTTON
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteProduct(product.id),
-                      ),
-                    ],
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+          ),
+
+          // ================= CATEGORY FILTER =================
+          if (_categories.length > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              );
-            },
-          );
-        },
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _selectedCategory = value;
+                  });
+                },
+              ),
+            ),
+
+          const SizedBox(height: 12),
+
+          // ================= PRODUCT LIST =================
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: productsCollection.snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Something went wrong'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                var productDocs = snapshot.data?.docs ?? [];
+
+                // Apply search filter
+                if (_searchQuery.isNotEmpty) {
+                  productDocs = productDocs.where((doc) {
+                    final name = (doc['name'] ?? '').toString().toLowerCase();
+                    return name.contains(_searchQuery);
+                  }).toList();
+                }
+
+                // Apply category filter
+                if (_selectedCategory != 'All') {
+                  productDocs = productDocs.where((doc) {
+                    final category = doc['category'] ?? '';
+                    return category == _selectedCategory;
+                  }).toList();
+                }
+
+                if (productDocs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 80,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Oops! No products here 😢',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try another product or category or check back later.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(
+                              context,
+                            ); // Go back to categories or home
+                          },
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Browse Other Categories'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      
+                      ],
+                    ),
+                   );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemCount: productDocs.length,
+                  itemBuilder: (context, index) {
+                    final product = productDocs[index];
+                    final productData = {
+                      'id': product.id,
+                      'name': product['name'] ?? '',
+                      'price': product['price']?.toDouble() ?? 0.0,
+                      'category': product['category'] ?? '',
+                      'description': product['description'] ?? '',
+                      'imageUrl': product['imageUrl'] ?? '',
+                    };
+
+                    return Card(
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        leading: productData['imageUrl'] != ''
+                            ? Image.network(
+                                productData['imageUrl'],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.image, size: 50),
+                        title: Text(productData['name']),
+                        subtitle: Text(
+                          'Category: ${productData['category']}\nPrice: KES ${productData['price'].toStringAsFixed(2)}',
+                        ),
+                        isThreeLine: true,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // EDIT BUTTON
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _editProduct(productData),
+                            ),
+                            // DELETE BUTTON
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteProduct(product.id),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addProduct,
@@ -111,9 +251,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
     if (!mounted) return;
     if (newProduct != null) {
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        const SnackBar(content: Text('Product added')),
-      );
+      ScaffoldMessenger.of(
+        scaffoldContext,
+      ).showSnackBar(const SnackBar(content: Text('Product added')));
     }
   }
 
@@ -128,9 +268,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
     if (!mounted) return;
     if (updatedProduct != null) {
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        const SnackBar(content: Text('Product updated')),
-      );
+      ScaffoldMessenger.of(
+        scaffoldContext,
+      ).showSnackBar(const SnackBar(content: Text('Product updated')));
     }
   }
 
@@ -159,9 +299,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     if (confirm == true) {
       await productsCollection.doc(productId).delete();
       if (!mounted) return;
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        const SnackBar(content: Text('Product deleted')),
-      );
+      ScaffoldMessenger.of(
+        scaffoldContext,
+      ).showSnackBar(const SnackBar(content: Text('Product deleted')));
     }
   }
 }

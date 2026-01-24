@@ -1,7 +1,7 @@
 // lib/features/dashboards/admin/services/admin_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import '../../../products/models/product_model.dart';
+import 'package:mobimart_app/features/models/product_model.dart';
 import '../../../orders/models/order_model.dart';
 
 class AdminService {

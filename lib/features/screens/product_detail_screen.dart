@@ -1,7 +1,3 @@
-// lib/features/product/screens/product_details_page.dart
-
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
@@ -14,13 +10,14 @@ class ProductDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            /* ================= TOP APP BAR ================= */
+            // ================= TOP APP BAR =================
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -63,14 +60,14 @@ class ProductDetailsPage extends StatelessWidget {
               ),
             ),
 
-            /* ================= PRODUCT CONTENT ================= */
+            // ================= PRODUCT CONTENT =================
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /* Product Image */
+                    // Product Image
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: product.imageUrl.isNotEmpty
@@ -86,26 +83,19 @@ class ProductDetailsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    /* Product Name */
+                    // Product Name
                     Text(
                       product.name,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
+                      style: theme.textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
 
-                    /* Category Badge */
+                    // Category Badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Color.fromRGBO(
-                          primaryColor.red,
-                          primaryColor.green,
-                          primaryColor.blue,
-                          0.8, // opacity between 0.0 and 1.0
-                        ),
+                        color: primaryColor.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -119,7 +109,7 @@ class ProductDetailsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    /* Product Price */
+                    // Product Price
                     Text(
                       "KSh ${product.price.toStringAsFixed(0)}",
                       style: TextStyle(
@@ -130,7 +120,7 @@ class ProductDetailsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    /* Product Description */
+                    // Product Description
                     Text(
                       product.description,
                       style: const TextStyle(fontSize: 16, height: 1.5),
@@ -145,16 +135,15 @@ class ProductDetailsPage extends StatelessWidget {
         ),
       ),
 
-      /* ================= ADD TO CART BUTTON ================= */
+      // ================= ADD TO CART BUTTON =================
       bottomSheet: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: theme.scaffoldBackgroundColor,
         child: Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Access the provider
                   final userProvider =
                       Provider.of<UserProvider>(context, listen: false);
 

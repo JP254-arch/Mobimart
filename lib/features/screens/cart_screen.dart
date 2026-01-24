@@ -1,8 +1,7 @@
-// lib/features/screens/cart_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
+import 'package:mobimart_app/features/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 
 class CartScreen extends StatefulWidget {
@@ -20,12 +19,11 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final cartItems = userProvider.currentUser?.cart ?? [];
+    final cartItems = userProvider.currentUser?.cart ?? <ProductModel>[];
 
-    // Calculate total
     final totalPrice = cartItems.fold<double>(
       0,
-      (sum, item) => sum + item.price,
+      (sum, item) => sum + (item.price * item.quantity),
     );
 
     return Scaffold(
@@ -34,10 +32,69 @@ class _CartScreenState extends State<CartScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: cartItems.isEmpty
             ? Center(
-                child: Text(
-                  "Your Mobimart cart is empty.",
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 80,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Whoops! Your cart is empty!',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Looks like your cart is empty.\nAdd something to make me happy!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const HomeScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Browse Other Categories'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               )
             : ListView.builder(
@@ -48,6 +105,10 @@ class _CartScreenState extends State<CartScreen> {
                     product: product,
                     onRemove: () async {
                       await userProvider.removeFromCart(product.id);
+                    },
+                    onQuantityChanged: (newQuantity) {
+                      userProvider.updateCartItemQuantity(
+                          product.id, newQuantity);
                     },
                   );
                 },
@@ -73,7 +134,6 @@ class _CartScreenState extends State<CartScreen> {
                     onPressed: _isProcessingCheckout
                         ? null
                         : () async {
-                            // Cache messenger before async gap
                             final messenger = ScaffoldMessenger.of(context);
 
                             final confirmed = await showDialog<bool>(
@@ -120,8 +180,7 @@ class _CartScreenState extends State<CartScreen> {
                               if (!mounted) return;
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content:
-                                      Text("Checkout failed. Error: $e"),
+                                  content: Text("Checkout failed. Error: $e"),
                                 ),
                               );
                             } finally {
@@ -163,16 +222,19 @@ class _CartScreenState extends State<CartScreen> {
 class CartItemCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onRemove;
+  final ValueChanged<int> onQuantityChanged;
 
   const CartItemCard({
     super.key,
     required this.product,
     required this.onRemove,
+    required this.onQuantityChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final quantity = product.quantity;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -182,7 +244,7 @@ class CartItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 13), // replaced withOpacity
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -192,12 +254,15 @@ class CartItemCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              product.imageUrl,
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
+            child: product.imageUrl.isNotEmpty
+                ? Image.network(
+                    product.imageUrl,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const Icon(Icons.image),
+                  )
+                : const Icon(Icons.image, size: 80),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -212,11 +277,34 @@ class CartItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "KSh ${product.price.toStringAsFixed(0)}",
+                  "KSh ${(product.price * quantity).toStringAsFixed(0)}",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: primaryColor,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (quantity > 1) {
+                          onQuantityChanged(quantity - 1);
+                        }
+                      },
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      quantity.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        onQuantityChanged(quantity + 1);
+                      },
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -1,7 +1,7 @@
 // lib/features/products/services/product_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/product_model.dart';
+import 'package:mobimart_app/features/models/product_model.dart';
 
 class ProductService {
   final _db = FirebaseFirestore.instance;

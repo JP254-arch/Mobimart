@@ -21,11 +21,12 @@ class UserProvider with ChangeNotifier {
   bool get isAdmin => _user?.role == 'admin';
   bool get isRegularUser => _user?.role == 'user';
 
-  List<ProductModel> get wishlist => _user?.wishlist ?? [];
-  List<ProductModel> get cart => _user?.cart ?? [];
+  List<ProductModel> get wishlist =>
+      _user?.wishlist.map((p) => p).toList() ?? [];
+  List<ProductModel> get cart =>
+      _user?.cart.map((p) => p).toList() ?? [];
 
   /// ================= SET CURRENT USER =================
-  /// Use this after registration or login to update provider state
   void setCurrentUser(UserModel user) {
     _user = user;
     notifyListeners();
@@ -41,10 +42,7 @@ class UserProvider with ChangeNotifier {
     }
 
     try {
-      final doc = await _firestore
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
+      final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
       if (!doc.exists) return;
 
       _user = UserModel.fromFirestore(doc);
@@ -55,17 +53,13 @@ class UserProvider with ChangeNotifier {
   }
 
   /// ================= LOGIN =================
-  /// Returns null if successful, otherwise an error message
   Future<String?> login(String email, String password) async {
     try {
       final cred = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      final doc = await _firestore
-          .collection('users')
-          .doc(cred.user!.uid)
-          .get();
+      final doc = await _firestore.collection('users').doc(cred.user!.uid).get();
 
       if (!doc.exists) return 'User not found';
 
@@ -97,21 +91,15 @@ class UserProvider with ChangeNotifier {
         name: name,
         email: email,
         phone: phone,
-        role: 'user', // Default new user role
+        role: 'user',
         isActive: true,
         wishlist: [],
         cart: [],
         createdAt: Timestamp.now(),
       );
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(user.toFirestore());
-
-      // Update provider state
+      await _firestore.collection('users').doc(user.uid).set(user.toFirestore());
       setCurrentUser(user);
-
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
@@ -127,7 +115,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= UPDATE USER FIELD =================
+  /// ================= UPDATE FIELD =================
   Future<void> updateField(String field, String value) async {
     if (_user == null) return;
 
@@ -185,14 +173,12 @@ class UserProvider with ChangeNotifier {
   Future<void> removeFromWishlist(String productId) async {
     if (_user == null) return;
 
-    final updatedWishlist = _user!.wishlist
-        .where((p) => p.id != productId)
-        .toList();
+    final updatedWishlist =
+        _user!.wishlist.where((p) => p.id != productId).toList();
     await _firestore.collection('users').doc(_user!.uid).update({
       'wishlist': updatedWishlist.map((p) => p.toJson()).toList(),
       'updatedAt': Timestamp.now(),
     });
-
     _user = _user!.copyWith(wishlist: updatedWishlist);
     notifyListeners();
   }
@@ -201,15 +187,23 @@ class UserProvider with ChangeNotifier {
   Future<void> addToCart(ProductModel product) async {
     if (_user == null) return;
 
-    if (!_user!.cart.any((p) => p.id == product.id)) {
-      final updatedCart = [..._user!.cart, product];
-      await _firestore.collection('users').doc(_user!.uid).update({
-        'cart': updatedCart.map((p) => p.toJson()).toList(),
-        'updatedAt': Timestamp.now(),
-      });
-      _user = _user!.copyWith(cart: updatedCart);
-      notifyListeners();
+    final existingIndex = _user!.cart.indexWhere((p) => p.id == product.id);
+    List<ProductModel> updatedCart = [..._user!.cart];
+
+    if (existingIndex == -1) {
+      updatedCart.add(product);
+    } else {
+      // If item exists, just increment quantity
+      updatedCart[existingIndex].quantity += product.quantity;
     }
+
+    await _firestore.collection('users').doc(_user!.uid).update({
+      'cart': updatedCart.map((p) => p.toJson()).toList(),
+      'updatedAt': Timestamp.now(),
+    });
+
+    _user = _user!.copyWith(cart: updatedCart);
+    notifyListeners();
   }
 
   Future<void> removeFromCart(String productId) async {
@@ -234,6 +228,23 @@ class UserProvider with ChangeNotifier {
 
     _user = _user!.copyWith(cart: []);
     notifyListeners();
+  }
+
+  /// ================= UPDATE CART ITEM QUANTITY =================
+  void updateCartItemQuantity(String productId, int newQuantity) {
+    if (_user == null) return;
+
+    final index = _user!.cart.indexWhere((p) => p.id == productId);
+    if (index != -1) {
+      _user!.cart[index].quantity = newQuantity;
+
+      _firestore.collection('users').doc(_user!.uid).update({
+        'cart': _user!.cart.map((p) => p.toJson()).toList(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      notifyListeners();
+    }
   }
 
   /// ================= PROFILE PHOTO =================
@@ -269,4 +280,6 @@ class UserProvider with ChangeNotifier {
       return 'Failed to upload photo';
     }
   }
+
+  void setWishlistSearchQuery(String query) {}
 }

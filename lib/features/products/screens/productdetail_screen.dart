@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:provider/provider.dart';
-import '../models/product_model.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../../core/widgets/primary_button.dart';
 

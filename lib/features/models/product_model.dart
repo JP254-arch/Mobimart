@@ -9,6 +9,7 @@ class ProductModel {
   final String category;
   final double price;
   final String imageUrl;
+  int quantity; // Added quantity
 
   ProductModel({
     required this.id,
@@ -17,6 +18,7 @@ class ProductModel {
     required this.category,
     required this.price,
     required this.imageUrl,
+    this.quantity = 1, // Default 1
   });
 
   // ================== From Firestore Document ==================
@@ -29,10 +31,11 @@ class ProductModel {
       category: data['category'] ?? '',
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: data['imageUrl'] ?? '',
+      quantity: data['quantity'] ?? 1,
     );
   }
 
-  // ================== From Map / JSON ==================
+  // ================== From Map ==================
   factory ProductModel.fromMap(Map<String, dynamic> map, String id) {
     return ProductModel(
       id: id,
@@ -41,10 +44,11 @@ class ProductModel {
       category: map['category'] ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: map['imageUrl'] ?? '',
+      quantity: map['quantity'] ?? 1,
     );
   }
 
-  /// Added: fromJson to fix your UserModel usage
+  // ================== From JSON ==================
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
       id: json['id'] ?? '',
@@ -53,11 +57,12 @@ class ProductModel {
       category: json['category'] ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: json['imageUrl'] ?? '',
+      quantity: json['quantity'] ?? 1,
     );
   }
 
-  // ================== To Map / JSON ==================
-  Map<String, dynamic> toMap() {
+  // ================== To JSON ==================
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
@@ -65,20 +70,19 @@ class ProductModel {
       'category': category,
       'price': price,
       'imageUrl': imageUrl,
+      'quantity': quantity,
     };
   }
 
-  Map<String, dynamic> toJson() => toMap();
-
-  // ================== Empty Product (fallback) ==================
-  factory ProductModel.empty() {
-    return ProductModel(
-      id: '',
-      name: '',
-      description: '',
-      category: '',
-      price: 0.0,
-      imageUrl: '',
-    );
+  // ================== To Map ==================
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'description': description,
+      'category': category,
+      'price': price,
+      'imageUrl': imageUrl,
+      'quantity': quantity,
+    };
   }
 }

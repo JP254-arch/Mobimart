@@ -1,5 +1,7 @@
+// lib/features/models/user_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mobimart_app/features/models/product_model.dart';
+import 'package:mobimart_app/features/models/product_model.dart'; // <- updated import
 
 class UserModel {
   final String uid;
@@ -29,6 +31,7 @@ class UserModel {
     this.cart = const [],
   });
 
+  // ================== From Firestore ==================
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
 
@@ -53,6 +56,7 @@ class UserModel {
     );
   }
 
+  // ================== To Firestore ==================
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
@@ -68,6 +72,7 @@ class UserModel {
     };
   }
 
+  // ================== Copy With ==================
   UserModel copyWith({
     String? name,
     String? email,
