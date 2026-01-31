@@ -9,11 +9,12 @@ import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/widgets/loadding_manager.dart';
 import 'package:mobimart_app/widgets/subtitle_text.dart';
 import 'package:mobimart_app/widgets/title_text.dart';
+import 'package:mobimart_app/features/auth/widgets/google_button.dart';
+import 'package:mobimart_app/features/auth/services/google_auth.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = '/login';
-
   const LoginScreen({super.key});
 
   @override
@@ -53,33 +54,51 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     FocusScope.of(context).unfocus();
-
     if (!isValid) return;
 
     setState(() => _isLoading = true);
-
     try {
-      final userProvider =
-          Provider.of<UserProvider>(context, listen: false);
-
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
       final errorMessage = await userProvider.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+      if (errorMessage != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+      // AuthGate will automatically redirect if login succeeds
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      // Use GoogleAuth wrapper for Web & Mobile
+      final account = await GoogleAuth.signIn();
+      if (account == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google sign-in aborted')),
+          );
+        }
+        return;
+      }
+
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final errorMessage = await userProvider.loginWithGoogle(account: account);
 
       if (errorMessage != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMessage)),
         );
       }
-
-      // IMPORTANT:
-      // No navigation here.
-      // AuthGate listens to auth changes and redirects automatically.
+      // AuthGate will handle redirection
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -126,7 +145,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           validator: MyValidators.emailValidator,
                         ),
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: _passwordController,
                           focusNode: _passwordFocusNode,
@@ -153,12 +171,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           validator: MyValidators.passwordValidator,
                         ),
                         const SizedBox(height: 16),
-
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // Password reset can be wired later
+                              // TODO: Add forgot password logic
                             },
                             child: const SubtitleTextWidget(
                               label: 'Forgot password?',
@@ -167,9 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -184,26 +199,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _login,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-                        SubtitleTextWidget(
-                          label: 'OR CONNECT USING',
-                        ),
+                        const SubtitleTextWidget(label: 'OR CONNECT USING'),
                         const SizedBox(height: 16),
-
                         Row(
-                          children: const [
+                          children: [
                             Expanded(
-                              child: SizedBox(
-                                height: kBottomNavigationBarHeight,
-                                child: Center(child: Text('Coming soon')),
+                              child: GoogleButton(
+                                onPressed: _loginWithGoogle,
                               ),
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 16),
-
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

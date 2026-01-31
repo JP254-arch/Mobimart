@@ -1,1 +1,42 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"mobimart-b80a2","appId":"1:580060550825:android:13d98f1f805cb24fd67bb8","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"mobimart-b80a2","configurations":{"android":"1:580060550825:android:13d98f1f805cb24fd67bb8","ios":"1:580060550825:ios:80dc606f8df9c072d67bb8","macos":"1:580060550825:ios:80dc606f8df9c072d67bb8","web":"1:580060550825:web:b36e6911a6b08aa6d67bb8","windows":"1:580060550825:web:242c716e6b5afc59d67bb8"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mobimart-b80a2",
+          "appId": "1:580060550825:android:13d98f1f805cb24fd67bb8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mobimart-b80a2",
+          "configurations": {
+            "android": "1:580060550825:android:13d98f1f805cb24fd67bb8",
+            "ios": "1:580060550825:ios:80dc606f8df9c072d67bb8",
+            "macos": "1:580060550825:ios:80dc606f8df9c072d67bb8",
+            "web": "1:580060550825:web:b36e6911a6b08aa6d67bb8",
+            "windows": "1:580060550825:web:242c716e6b5afc59d67bb8"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
+      "source": "functions"
+    }
+  ]
+}

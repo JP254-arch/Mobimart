@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 class CartScreen extends StatelessWidget {
 const CartScreen({super.key});
 
+  static get routeName => null;
+
 
 @override
 Widget build(BuildContext context) {

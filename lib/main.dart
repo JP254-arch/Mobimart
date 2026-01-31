@@ -1,9 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:mobimart_app/auth_gate.dart';
-import 'package:mobimart_app/features/products/providers/product_provider.dart';
 import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
+import 'package:mobimart_app/features/products/providers/product_provider.dart';
+import 'package:mobimart_app/auth_gate.dart';
 import 'package:mobimart_app/features/auth/screens/login_screen.dart';
 import 'package:mobimart_app/features/auth/screens/register_screen.dart';
 import 'package:mobimart_app/features/screens/help_support_screen.dart';
@@ -25,7 +25,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => ProductProvider()), // ProductProvider added
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
       ],
       child: const MyApp(),
     ),
@@ -42,9 +42,8 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Mobimart',
-          theme: themeProvider.themeData, // dynamic theme support
+          theme: themeProvider.themeData,
           home: const AuthGate(),
-
           routes: {
             LoginScreen.routeName: (_) => const LoginScreen(),
             RegisterScreen.routeName: (_) => const RegisterScreen(),
