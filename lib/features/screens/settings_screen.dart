@@ -21,11 +21,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final userProvider = context.read<UserProvider>();
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      return const Scaffold(body: Center(child: Text("No user logged in")));
+      return const Scaffold(
+        body: Center(child: Text('No user logged in')),
+      );
     }
 
     return StreamBuilder<DocumentSnapshot>(
@@ -42,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
           return const Scaffold(
-            body: Center(child: Text("User data not found")),
+            body: Center(child: Text('User data not found')),
           );
         }
 
@@ -53,7 +57,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final userPhotoUrl = userData['photoUrl'] ?? '';
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Settings'), centerTitle: true),
+          appBar: AppBar(
+            title: const Text('Settings'),
+            centerTitle: true,
+            backgroundColor: colorScheme.surface,
+            foregroundColor: colorScheme.onSurface,
+            elevation: 0,
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -63,40 +73,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Stack(
                     children: [
                       CircleAvatar(
-                        radius: 50,
-                        backgroundImage: (userPhotoUrl.isNotEmpty)
+                        radius: 52,
+                        backgroundColor: colorScheme.primaryContainer,
+                        backgroundImage: userPhotoUrl.isNotEmpty
                             ? NetworkImage(userPhotoUrl)
                             : const AssetImage(
-                                    'assets/images/user_placeholder.png',
-                                  )
-                                  as ImageProvider,
+                                    'assets/images/user_placeholder.png')
+                                as ImageProvider,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
                         child: InkWell(
                           onTap: () async {
-                            final scaffoldMessenger = ScaffoldMessenger.of(
-                              context,
-                            );
-                            final error = await userProvider
-                                .uploadProfilePhoto();
+                            final messenger =
+                                ScaffoldMessenger.of(context);
+                            final error =
+                                await userProvider.uploadProfilePhoto();
                             if (!mounted) return;
                             if (error != null) {
-                              scaffoldMessenger.showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(content: Text(error)),
                               );
                             }
                           },
                           child: CircleAvatar(
-                            radius: 16,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
-                            child: const Icon(
+                            radius: 18,
+                            backgroundColor: colorScheme.primary,
+                            child: Icon(
                               Icons.edit,
                               size: 18,
-                              color: Colors.white,
+                              color: colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -104,73 +111,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
                 // ================= THEME SWITCH =================
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, _) {
-                    return SwitchListTile(
-                      title: const Text('Dark Mode'),
-                      value: themeProvider.isDarkTheme ?? false,
-                      onChanged: (val) => themeProvider.setDarkTheme(val),
-                    );
-                  },
+                Card(
+                  color: colorScheme.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return SwitchListTile(
+                        title: const Text('Dark Mode'),
+                        subtitle: const Text('Use dark appearance'),
+                        value: themeProvider.isDarkTheme ?? false,
+                        activeColor: colorScheme.primary,
+                        onChanged: themeProvider.setDarkTheme,
+                      );
+                    },
+                  ),
                 ),
-                const Divider(),
 
-                // ================= NAME =================
-                _editableTile(
-                  icon: Icons.person_outline,
-                  label: 'Name',
-                  value: userName,
-                  onSave: (val) async {
-                    if (val.isEmpty) return;
-                    await userProvider.updateField('name', val);
-                  },
+                const SizedBox(height: 24),
+
+                // ================= ACCOUNT INFO =================
+                _sectionTitle('Account Information', textTheme),
+
+                Card(
+                  color: colorScheme.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      _editableTile(
+                        icon: Icons.person_outline,
+                        label: 'Name',
+                        value: userName,
+                        onSave: (val) async {
+                          if (val.isEmpty) return;
+                          await userProvider.updateField('name', val);
+                        },
+                      ),
+                      const Divider(height: 1),
+                      _editableTile(
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: userEmail,
+                        onSave: (val) async {
+                          if (val.isEmpty) return;
+                          await userProvider.updateField('email', val);
+                        },
+                      ),
+                      const Divider(height: 1),
+                      _editableTile(
+                        icon: Icons.phone_outlined,
+                        label: 'Phone',
+                        value: userPhone,
+                        onSave: (val) async {
+                          await userProvider.updateField('phone', val);
+                        },
+                      ),
+                      const Divider(height: 1),
+                      _passwordTile(userProvider),
+                    ],
+                  ),
                 ),
-                const Divider(),
 
-                // ================= EMAIL =================
-                _editableTile(
-                  icon: Icons.email_outlined,
-                  label: 'Email',
-                  value: userEmail,
-                  onSave: (val) async {
-                    if (val.isEmpty) return;
-                    await userProvider.updateField('email', val);
-                  },
-                ),
-                const Divider(),
-
-                // ================= PHONE =================
-                _editableTile(
-                  icon: Icons.phone_outlined,
-                  label: 'Phone',
-                  value: userPhone,
-                  onSave: (val) async {
-                    await userProvider.updateField('phone', val);
-                  },
-                ),
-                const Divider(),
-
-                // ================= PASSWORD =================
-                _passwordTile(userProvider),
-                const Divider(),
+                const SizedBox(height: 32),
 
                 // ================= QUICK NAVIGATION =================
-                const SizedBox(height: 24),
-                const Text(
-                  'Quick Navigation',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
+                _sectionTitle('Quick Navigation', textTheme),
                 const SizedBox(height: 12),
+
                 GridView.count(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 2.0,
+                  childAspectRatio: 1.8,
                   children: [
                     _ActionCard(
                       icon: Icons.favorite_border,
@@ -190,7 +210,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const CartScreen(),
+                          ),
                         );
                       },
                     ),
@@ -204,6 +226,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ================= SECTION TITLE =================
+  Widget _sectionTitle(String title, TextTheme textTheme) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(
+          title,
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
   // ================= EDITABLE TILE =================
   Widget _editableTile({
     required IconData icon,
@@ -211,58 +249,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String value,
     required Future<void> Function(String) onSave,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
-      leading: Icon(icon),
+      leading: Icon(icon, color: scheme.primary),
       title: Text(label),
-      subtitle: Text(value.isEmpty ? 'Not set' : value),
-      trailing: IconButton(
-        icon: const Icon(Icons.edit),
-        onPressed: () async {
-          final newValue = await _inputDialog(
-            title: 'Update $label',
-            initialValue: value,
-          );
-          if (newValue == null) return;
-          await onSave(newValue);
-        },
+      subtitle: Text(
+        value.isEmpty ? 'Not set' : value,
+        style: TextStyle(color: scheme.onSurfaceVariant),
       ),
+      trailing: Icon(Icons.edit, color: scheme.onSurfaceVariant),
+      onTap: () async {
+        final newValue = await _inputDialog(
+          title: 'Update $label',
+          initialValue: value,
+        );
+        if (newValue == null) return;
+        await onSave(newValue);
+      },
     );
   }
 
   // ================= PASSWORD TILE =================
   Widget _passwordTile(UserProvider provider) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
-      leading: const Icon(Icons.lock_outline),
+      leading: Icon(Icons.lock_outline, color: scheme.primary),
       title: const Text('Password'),
-      subtitle: Text(passwordMask),
-      trailing: IconButton(
-        icon: const Icon(Icons.edit),
-        onPressed: () async {
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-          final currentPassword = await _inputDialog(
-            title: 'Current Password',
-            obscure: true,
-          );
-          if (currentPassword == null) return;
-
-          final newPassword = await _inputDialog(
-            title: 'New Password',
-            obscure: true,
-          );
-          if (newPassword == null) return;
-
-          final error = await provider.updatePassword(
-            currentPassword: currentPassword,
-            newPassword: newPassword,
-          );
-
-          if (!mounted) return;
-          if (error != null) {
-            scaffoldMessenger.showSnackBar(SnackBar(content: Text(error)));
-          }
-        },
+      subtitle: Text(
+        passwordMask,
+        style: TextStyle(color: scheme.onSurfaceVariant),
       ),
+      trailing: Icon(Icons.edit, color: scheme.onSurfaceVariant),
+      onTap: () async {
+        final messenger = ScaffoldMessenger.of(context);
+
+        final currentPassword = await _inputDialog(
+          title: 'Current Password',
+          obscure: true,
+        );
+        if (currentPassword == null) return;
+
+        final newPassword = await _inputDialog(
+          title: 'New Password',
+          obscure: true,
+        );
+        if (newPassword == null) return;
+
+        final error = await provider.updatePassword(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        );
+
+        if (!mounted) return;
+        if (error != null) {
+          messenger.showSnackBar(SnackBar(content: Text(error)));
+        }
+      },
     );
   }
 
@@ -273,15 +317,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool obscure = false,
   }) {
     final controller = TextEditingController(text: initialValue);
+    final scheme = Theme.of(context).colorScheme;
 
     return showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(title),
+        backgroundColor: scheme.surface,
         content: TextField(
           controller: controller,
           obscureText: obscure,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
@@ -289,7 +337,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(context, controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -312,17 +361,28 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Card(
-        elevation: 1,
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 24),
+            Icon(icon, color: scheme.primary),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
           ],
         ),
       ),

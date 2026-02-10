@@ -12,6 +12,9 @@ dependencies:
     sdk: flutter
   google_sign_in: ^6.2.1
   google_sign_in_web: ^0.12.4+4
+  pdf: ^3.11.3      
+  printing: ^5.10.7
+  path_provider: ^2.0.14
 
   # Core UI
   cupertino_icons: ^1.0.8
@@ -52,6 +55,7 @@ flutter:
     - assets/images/user_placeholder.png
     - assets/icons/app_icon.png
     - assets/images/banners/
+    - assets/Open_Sans/OpenSans-Regular.ttf
 
 flutter_icons:
   android: true

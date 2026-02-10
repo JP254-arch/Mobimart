@@ -319,7 +319,6 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= DARJA PAYMENT =================
   /// ================= DARJA PAYMENT + TRANSACTIONS =================
   Future<String?> initiateDarajaPayment({
     required String phone,

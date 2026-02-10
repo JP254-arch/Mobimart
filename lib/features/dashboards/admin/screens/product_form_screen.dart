@@ -18,8 +18,8 @@ class ProductFormScreen extends StatefulWidget {
 
 class _ProductFormScreenState extends State<ProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final CollectionReference productsCollection =
-      FirebaseFirestore.instance.collection('products');
+  final CollectionReference productsCollection = FirebaseFirestore.instance
+      .collection('products');
 
   late final TextEditingController _nameController;
   late final TextEditingController _priceController;
@@ -32,16 +32,21 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.productData?['name'] ?? '');
-    _priceController =
-        TextEditingController(text: widget.productData?['price']?.toString() ?? '');
-    _categoryController =
-        TextEditingController(text: widget.productData?['category'] ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.productData?['description'] ?? '');
-    _imageUrlController =
-        TextEditingController(text: widget.productData?['imageUrl'] ?? '');
+    _nameController = TextEditingController(
+      text: widget.productData?['name'] ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.productData?['price']?.toString() ?? '',
+    );
+    _categoryController = TextEditingController(
+      text: widget.productData?['category'] ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: widget.productData?['description'] ?? '',
+    );
+    _imageUrlController = TextEditingController(
+      text: widget.productData?['imageUrl'] ?? '',
+    );
   }
 
   @override
@@ -68,28 +73,29 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     try {
       if (isEditMode) {
         // Update existing product
-        await productsCollection
-            .doc(widget.productData!['id'])
-            .update(product);
+        await productsCollection.doc(widget.productData!['id']).update(product);
 
         if (!mounted) return; // <-- Async-safe check
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Product updated')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Product updated')));
       } else {
         // Add new product
         await productsCollection.add(product);
 
         if (!mounted) return; // <-- Async-safe check
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Product added')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Product added')));
       }
 
       if (!mounted) return; // <-- Async-safe check before navigation
       Navigator.pop(context, product);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -113,10 +119,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   labelText: 'Product Name',
                   prefixIcon: Icon(Icons.shopping_bag),
                 ),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty
-                        ? 'Name is required'
-                        : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Name is required'
+                    : null,
               ),
               const SizedBox(height: 16),
 
@@ -125,15 +130,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 controller: _priceController,
                 decoration: const InputDecoration(
                   labelText: 'Price',
-                  prefixIcon: Icon(Icons.attach_money),
+                  prefixText: 'KES ',
                 ),
                 keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty
-                        ? 'Price is required'
-                        : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Price is required'
+                    : null,
               ),
-              const SizedBox(height: 16),
 
               /* Category */
               TextFormField(
@@ -142,10 +145,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   labelText: 'Category',
                   prefixIcon: Icon(Icons.category),
                 ),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty
-                        ? 'Category is required'
-                        : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Category is required'
+                    : null,
               ),
               const SizedBox(height: 16),
 
@@ -157,10 +159,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   prefixIcon: Icon(Icons.description),
                 ),
                 maxLines: 3,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty
-                        ? 'Description is required'
-                        : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Description is required'
+                    : null,
               ),
               const SizedBox(height: 16),
 

@@ -1,49 +1,184 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mobimart_app/features/orders/models/order_model.dart' as order_model;
+import 'package:mobimart_app/features/orders/models/order_model.dart'
+    as order_model;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 
-class OrdersScreen extends StatelessWidget {
-  OrdersScreen({super.key}); // non-const due to dynamic content
+class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
 
-  final CollectionReference ordersCollection =
-      FirebaseFirestore.instance.collection('orders');
+  static const String routeName = '/orders';
 
-  static const String routeName = '/orders'; // give a proper route name
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  final CollectionReference ordersCollection = FirebaseFirestore.instance
+      .collection('orders');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Orders'), centerTitle: true),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: ordersCollection.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: ordersCollection.snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Something went wrong'));
+                }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final List<QueryDocumentSnapshot> orderDocs = snapshot.data?.docs ?? [];
+                final orderDocs = snapshot.data?.docs ?? [];
 
-          if (orderDocs.isEmpty) {
-            return const Center(child: Text('You have no orders yet'));
-          }
+                if (orderDocs.isEmpty) {
+                  return const Center(child: Text('You have no orders yet'));
+                }
 
-          final List<order_model.Order> orders = orderDocs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return order_model.Order.fromMap(data, doc.id);
-          }).toList();
+                final orders = orderDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return order_model.Order.fromMap(data, doc.id);
+                }).toList();
 
-          return ListView.builder(
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: orders.length,
+                  itemBuilder: (context, index) =>
+                      OrderCard(order: orders[index]),
+                );
+              },
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
-            itemBuilder: (context, index) => OrderCard(order: orders[index]),
-          );
-        },
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.download),
+              label: const Text('Download Orders'),
+              onPressed: _downloadOrdersPdf,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  /// MAIN DOWNLOAD HANDLER
+  Future<void> _downloadOrdersPdf() async {
+    final snapshot = await ordersCollection.get();
+
+    final orders = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return order_model.Order.fromMap(data, doc.id);
+    }).toList();
+
+    if (orders.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No orders to export')));
+      return;
+    }
+
+    final pdfData = await _generateOrdersPdf(orders);
+
+    final directory = await _getDownloadDirectory();
+
+    // Timestamped filename (no overwrite)
+    final date = DateTime.now().toIso8601String().split('T').first;
+    final file = File('${directory.path}/orders_$date.pdf');
+
+    await file.writeAsBytes(pdfData);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('PDF saved to Downloads')));
+  }
+
+  /// Resolves a clean Downloads directory
+  Future<Directory> _getDownloadDirectory() async {
+    if (Platform.isAndroid) {
+      final dir = Directory('/storage/emulated/0/Download');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return dir;
+    }
+
+    // iOS / fallback
+    return await getApplicationDocumentsDirectory();
+  }
+
+  /// Generates PDF bytes (NO fonts, NO assets)
+  Future<Uint8List> _generateOrdersPdf(List<order_model.Order> orders) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Text(
+            'Orders Report',
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 16),
+
+          ...orders.map(
+            (order) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Order ID: ${order.id}',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text('Status: ${order.status}'),
+                pw.Text(
+                  'Date: ${order.date.toLocal().toString().split(' ')[0]}',
+                ),
+                pw.SizedBox(height: 8),
+
+                ...order.items.map(
+                  (item) => pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(item.name),
+                      pw.Text('KSh ${item.price.toStringAsFixed(0)}'),
+                    ],
+                  ),
+                ),
+
+                pw.Divider(),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Total',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.Text(
+                      'KSh ${order.total.toStringAsFixed(0)}',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return pdf.save();
   }
 }
 
@@ -74,7 +209,7 @@ class OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha((0.05 * 255).round()), // replaces deprecated withOpacity
+            color: Colors.black.withAlpha((0.05 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -83,7 +218,6 @@ class OrderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /* Header Row */
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -93,18 +227,19 @@ class OrderCard extends StatelessWidget {
               ),
               Text(
                 order.status,
-                style: TextStyle(fontWeight: FontWeight.bold, color: statusColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          /* Date */
           Text(
             'Date: ${order.date.toLocal().toString().split(' ')[0]}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const Divider(height: 24),
-          /* Items */
           ...order.items.map(
             (item) => Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -121,7 +256,6 @@ class OrderCard extends StatelessWidget {
             ),
           ),
           const Divider(height: 24),
-          /* Total */
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

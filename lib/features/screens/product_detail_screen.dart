@@ -67,7 +67,6 @@ class ProductDetailsPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Product Image
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: product.imageUrl.isNotEmpty
@@ -82,16 +81,12 @@ class ProductDetailsPage extends StatelessWidget {
                           : const Icon(Icons.image, size: 50),
                     ),
                     const SizedBox(height: 16),
-
-                    // Product Name
                     Text(
                       product.name,
                       style: theme.textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-
-                    // Category Badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -108,8 +103,6 @@ class ProductDetailsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Product Price
                     Text(
                       "KSh ${product.price.toStringAsFixed(0)}",
                       style: TextStyle(
@@ -119,14 +112,11 @@ class ProductDetailsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Product Description
                     Text(
                       product.description,
                       style: const TextStyle(fontSize: 16, height: 1.5),
                     ),
-
-                    const SizedBox(height: 100), // space for sticky button
+                    const SizedBox(height: 100), // space for bottom sheet
                   ],
                 ),
               ),
@@ -136,39 +126,43 @@ class ProductDetailsPage extends StatelessWidget {
       ),
 
       // ================= ADD TO CART BUTTON =================
-      bottomSheet: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        color: theme.scaffoldBackgroundColor,
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  final userProvider =
-                      Provider.of<UserProvider>(context, listen: false);
+      bottomSheet: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          color: theme.scaffoldBackgroundColor,
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final userProvider =
+                        Provider.of<UserProvider>(context, listen: false);
+                    await userProvider.addToCart(product);
 
-                  // Add product to cart
-                  userProvider.addToCart(product);
-
-                  // Show confirmation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${product.name} added to cart'),
-                      duration: const Duration(seconds: 1),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: const [
+                            Icon(Icons.shopping_cart, color: Colors.green),
+                            SizedBox(width: 8),
+                            Text('Added to cart'),
+                          ],
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.shopping_cart),
-                label: const Text("Add to Cart"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(Icons.shopping_cart), // <-- just the icon
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

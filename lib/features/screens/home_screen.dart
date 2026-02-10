@@ -1,5 +1,3 @@
-// lib/features/screens/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:mobimart_app/features/models/product_model.dart' as pmodel;
@@ -14,7 +12,6 @@ class HomeScreen extends StatelessWidget {
 
   static const String routeName = '/home';
 
-  // 🔹 Banner images
   static const List<String> bannerImages = [
     'assets/images/banners/banner1.png',
     'assets/images/banners/banner2.png',
@@ -24,7 +21,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
-    final userProvider = context.watch<UserProvider>();
+    final userProvider = context.read<UserProvider>();
     final primaryColor = Theme.of(context).colorScheme.primary;
 
     return SafeArea(
@@ -36,10 +33,9 @@ class HomeScreen extends StatelessWidget {
             // ================= HEADER =================
             Text(
               'Mobimart',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -59,7 +55,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // ================= SWIPER / CAROUSEL =================
+            // ================= CAROUSEL =================
             CarouselSlider(
               options: CarouselOptions(
                 height: 170,
@@ -117,8 +113,7 @@ class HomeScreen extends StatelessWidget {
                           Icon(
                             category.icon,
                             size: 24,
-                            color:
-                                isSelected ? Colors.white : Colors.grey[700],
+                            color: isSelected ? Colors.white : Colors.grey[700],
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -145,10 +140,9 @@ class HomeScreen extends StatelessWidget {
             // ================= PRODUCTS =================
             Text(
               'Products',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
@@ -156,8 +150,11 @@ class HomeScreen extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    Icon(Icons.search_off,
-                        size: 80, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.search_off,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Oops! No products found',
@@ -175,8 +172,7 @@ class HomeScreen extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: productProvider.filteredProducts.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
@@ -189,14 +185,16 @@ class HomeScreen extends StatelessWidget {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            ProductDetailsPage(product: product),
+                        builder: (_) => ProductDetailsPage(product: product),
                       ),
                     ),
                     onAddToCart: () async {
                       await userProvider.addToCart(product);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Added to cart')),
+                        SnackBar(
+                          content: Text('${product.name} added to cart'),
+                          duration: const Duration(seconds: 1),
+                        ),
                       );
                     },
                     onAddToWishlist: () async {
@@ -266,12 +264,13 @@ class ProductCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(product.name,
-                maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
             Text(
               'KSh ${product.price.toStringAsFixed(0)}',
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
@@ -281,9 +280,12 @@ class ProductCard extends StatelessWidget {
                   onPressed: onAddToWishlist,
                   icon: const Icon(Icons.favorite_border, color: Colors.red),
                 ),
-                ElevatedButton(
+                IconButton(
                   onPressed: onAddToCart,
-                  child: const Text('+ cart'),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.green,
+                  ),
                 ),
               ],
             ),

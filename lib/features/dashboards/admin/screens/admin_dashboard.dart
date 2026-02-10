@@ -1,15 +1,10 @@
-// lib/features/admin/screens/admin_dashboard_screen.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/screens/help_support_screen.dart';
-import 'package:mobimart_app/features/screens/home_screen.dart';
 import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
-import 'package:mobimart_app/features/screens/profile_screen.dart';
 import 'package:mobimart_app/features/screens/settings_screen.dart';
-import 'package:mobimart_app/features/screens/cart_screen.dart';
 import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 import '../screens/manage_users_screen.dart';
 import '../screens/manage_products_screen.dart';
@@ -64,15 +59,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     try {
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .get();
-      final productsSnapshot = await FirebaseFirestore.instance
-          .collection('products')
-          .get();
-      final ordersSnapshot = await FirebaseFirestore.instance
-          .collection('orders')
-          .get();
+      final usersSnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      final productsSnapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+      final ordersSnapshot =
+          await FirebaseFirestore.instance.collection('orders').get();
 
       if (mounted) {
         setState(() {
@@ -88,16 +80,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final colorScheme = theme.themeData.colorScheme;
-    final textTheme = theme.themeData.textTheme;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final theme = themeProvider.themeData;
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         centerTitle: true,
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
       ),
       drawer: buildAdminDrawer(
         context,
@@ -111,8 +105,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileSection(context, colorScheme, textTheme),
-            const SizedBox(height: 24),
+            _buildProfileSection(colorScheme, textTheme),
+            const SizedBox(height: 28),
             _buildStatsOverview(colorScheme),
             const SizedBox(height: 32),
             _buildQuickActions(colorScheme),
@@ -125,7 +119,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildProfileSection(
-    BuildContext context,
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
@@ -133,37 +126,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         children: [
           CircleAvatar(
-            radius: 50,
+            radius: 48,
+            backgroundColor: colorScheme.primaryContainer,
             backgroundImage: (userPhotoUrl != null && userPhotoUrl!.isNotEmpty)
                 ? NetworkImage(userPhotoUrl!)
                 : const AssetImage('assets/images/user_placeholder.png')
-                      as ImageProvider,
+                    as ImageProvider,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             userName.isNotEmpty ? userName : 'Loading...',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            userEmail.isNotEmpty ? userEmail : '-',
-            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            userPhone.isNotEmpty ? userPhone : '-',
-            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
+            userEmail,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
             onPressed: () =>
                 Navigator.pushNamed(context, SettingsScreen.routeName),
             icon: const Icon(Icons.edit),
-            label: const Text("Edit Profile"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-            ),
+            label: const Text('Edit Profile'),
           ),
         ],
       ),
@@ -184,19 +173,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _StatCard(
               title: 'Users',
               value: userCount.toString(),
-              colorScheme: colorScheme,
+              icon: Icons.people,
+              containerColor: colorScheme.primaryContainer,
+              foregroundColor: colorScheme.onPrimaryContainer,
             ),
             const SizedBox(width: 12),
             _StatCard(
               title: 'Products',
               value: productCount.toString(),
-              colorScheme: colorScheme,
+              icon: Icons.shopping_bag,
+              containerColor: colorScheme.secondaryContainer,
+              foregroundColor: colorScheme.onSecondaryContainer,
             ),
             const SizedBox(width: 12),
             _StatCard(
               title: 'Orders',
               value: orderCount.toString(),
-              colorScheme: colorScheme,
+              icon: Icons.receipt_long,
+              containerColor: colorScheme.tertiaryContainer,
+              foregroundColor: colorScheme.onTertiaryContainer,
             ),
           ],
         ),
@@ -217,17 +212,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.15,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: [
-            _ActionCard(
-              icon: Icons.person_outline,
-              label: 'Profile',
-              onTap: () =>
-                  Navigator.pushNamed(context, ProfileScreen.routeName),
-              colorScheme: colorScheme,
-            ),
             _ActionCard(
               icon: Icons.people,
               label: 'Manage Users',
@@ -248,19 +236,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             _ActionCard(
               icon: Icons.receipt_long,
-              label: 'View Orders',
+              label: 'Orders',
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ManageOrdersScreen()),
-              ),
-              colorScheme: colorScheme,
-            ),
-            _ActionCard(
-              icon: Icons.shopping_cart,
-              label: 'Cart',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
               ),
               colorScheme: colorScheme,
             ),
@@ -289,8 +268,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         const SizedBox(height: 12),
         Card(
-          elevation: 0.5,
-          color: colorScheme.surface,
+          color: colorScheme.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Column(
             children: [
               _OptionTile(
@@ -300,7 +281,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   context,
                   MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
                 ),
-                colorScheme: colorScheme,
               ),
               const Divider(height: 1),
               _OptionTile(
@@ -312,7 +292,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     builder: (_) => const PrivacyPolicyScreen(),
                   ),
                 ),
-                colorScheme: colorScheme,
               ),
               const Divider(height: 1),
               _OptionTile(
@@ -322,7 +301,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   context,
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 ),
-                colorScheme: colorScheme,
               ),
             ],
           ),
@@ -343,123 +321,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            accountName: Text(userName),
-            accountEmail: Text(userEmail),
+            decoration: BoxDecoration(color: colorScheme.primaryContainer),
+            accountName: Text(
+              userName,
+              style: TextStyle(color: colorScheme.onPrimaryContainer),
+            ),
+            accountEmail: Text(
+              userEmail,
+              style: TextStyle(color: colorScheme.onPrimaryContainer),
+            ),
             currentAccountPicture: CircleAvatar(
               backgroundImage: (userPhotoUrl != null && userPhotoUrl.isNotEmpty)
                   ? NetworkImage(userPhotoUrl)
                   : const AssetImage('assets/images/user_placeholder.png')
-                        as ImageProvider,
+                      as ImageProvider,
             ),
-            decoration: BoxDecoration(color: colorScheme.primary),
           ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Home'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, HomeScreen.routeName);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Profile'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, ProfileScreen.routeName);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.people),
-            title: const Text('Manage Users'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ManageUsersScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.shopping_bag),
-            title: const Text('Manage Products'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ManageProductsScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.receipt_long),
-            title: const Text('Manage Orders'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ManageOrdersScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.shopping_cart),
-            title: const Text('Cart'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.favorite_border),
-            title: const Text('Wishlist'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WishlistScreen()),
-              );
-            },
-          ),
+          _drawerItem(Icons.people, 'Manage Users', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManageUsersScreen()),
+            );
+          }),
+          _drawerItem(Icons.shopping_bag, 'Manage Products', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManageProductsScreen()),
+            );
+          }),
+          _drawerItem(Icons.receipt_long, 'Manage Orders', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManageOrdersScreen()),
+            );
+          }),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Help & Support'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('Privacy Policy'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
+          _drawerItem(Icons.settings_outlined, 'Settings', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          }),
         ],
       ),
+    );
+  }
+
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      onTap: onTap,
     );
   }
 }
@@ -469,34 +381,43 @@ class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.title,
     required this.value,
-    required this.colorScheme,
+    required this.icon,
+    required this.containerColor,
+    required this.foregroundColor,
   });
+
   final String title;
   final String value;
-  final ColorScheme colorScheme;
+  final IconData icon;
+  final Color containerColor;
+  final Color foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Card(
-        color: colorScheme.surface,
-        elevation: 1,
+        color: containerColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              Icon(icon, color: foregroundColor),
+              const SizedBox(height: 8),
               Text(
                 value,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
+                  color: foregroundColor,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 title,
-                style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
+                style: TextStyle(color: foregroundColor.withOpacity(0.8)),
               ),
             ],
           ),
@@ -514,6 +435,7 @@ class _ActionCard extends StatelessWidget {
     required this.onTap,
     required this.colorScheme,
   });
+
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -522,15 +444,20 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Card(
-        color: colorScheme.surface,
-        elevation: 1,
+        color: colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 32, color: colorScheme.onSurface),
+            CircleAvatar(
+              backgroundColor: colorScheme.primaryContainer,
+              child: Icon(icon, color: colorScheme.onPrimaryContainer),
+            ),
             const SizedBox(height: 12),
             Text(
               label,
@@ -552,23 +479,20 @@ class _OptionTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
-    required this.colorScheme,
   });
+
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
-      leading: Icon(icon, color: colorScheme.onSurface),
-      title: Text(title, style: TextStyle(color: colorScheme.onSurface)),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 16,
-        color: colorScheme.onSurface,
-      ),
+      leading: Icon(icon, color: scheme.primary),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
   }
