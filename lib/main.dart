@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
+// import 'package:mobimart_app/features/providers/payment_provider.dart';
 import 'package:mobimart_app/features/products/providers/product_provider.dart';
 import 'package:mobimart_app/auth_gate.dart';
 import 'package:mobimart_app/features/auth/screens/login_screen.dart';

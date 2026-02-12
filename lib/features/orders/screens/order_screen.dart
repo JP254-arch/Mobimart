@@ -3,10 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mobimart_app/features/orders/models/order_model.dart'
-    as order_model;
+import 'package:mobimart_app/features/orders/models/order_model.dart' as order_model;
+import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -18,8 +19,19 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  final CollectionReference ordersCollection = FirebaseFirestore.instance
-      .collection('orders');
+  late final Query ordersQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final uid = userProvider.currentUser?.uid ?? '';
+
+    // Query only the orders of the logged-in user
+    ordersQuery = FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: uid);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +41,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: ordersCollection.snapshots(),
+              stream: ordersQuery.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Center(child: Text('Something went wrong'));
@@ -74,7 +86,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   /// MAIN DOWNLOAD HANDLER
   Future<void> _downloadOrdersPdf() async {
-    final snapshot = await ordersCollection.get();
+    final snapshot = await ordersQuery.get();
 
     final orders = snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
@@ -83,26 +95,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     if (orders.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No orders to export')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No orders to export')));
       return;
     }
 
     final pdfData = await _generateOrdersPdf(orders);
-
     final directory = await _getDownloadDirectory();
 
-    // Timestamped filename (no overwrite)
     final date = DateTime.now().toIso8601String().split('T').first;
     final file = File('${directory.path}/orders_$date.pdf');
-
     await file.writeAsBytes(pdfData);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('PDF saved to Downloads')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('PDF saved to ${file.path}')));
   }
 
   /// Resolves a clean Downloads directory
@@ -114,12 +121,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
       }
       return dir;
     }
-
-    // iOS / fallback
     return await getApplicationDocumentsDirectory();
   }
 
-  /// Generates PDF bytes (NO fonts, NO assets)
+  /// Generates PDF bytes
   Future<Uint8List> _generateOrdersPdf(List<order_model.Order> orders) async {
     final pdf = pw.Document();
 
@@ -131,7 +136,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
             style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 16),
-
           ...orders.map(
             (order) => pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -145,7 +149,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   'Date: ${order.date.toLocal().toString().split(' ')[0]}',
                 ),
                 pw.SizedBox(height: 8),
-
                 ...order.items.map(
                   (item) => pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -155,7 +158,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-
                 pw.Divider(),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

@@ -1,5 +1,3 @@
-// lib/features/screens/wishlist_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
@@ -23,7 +21,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Mobimart Wishlist"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text("Mobimart Wishlist"),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Consumer<UserProvider>(
@@ -45,7 +46,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     hintText: "Search wishlist...",
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
-                    fillColor: theme.cardColor.withOpacity(0.1),
+                    fillColor: theme.cardColor.withAlpha(25),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -61,21 +62,20 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
                 // ================= EMPTY STATES =================
                 if (wishlist.isEmpty)
-                  Expanded(child: _EmptyWishlistState())
+                  const Expanded(child: _EmptyWishlistState())
                 else if (filteredWishlist.isEmpty)
-                  Expanded(child: _NoSearchResultsState())
-                // ================= GRID =================
+                  const Expanded(child: _NoSearchResultsState())
                 else
                   Expanded(
                     child: GridView.builder(
                       itemCount: filteredWishlist.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.70,
-                          ),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 0.70,
+                      ),
                       itemBuilder: (context, index) {
                         final product = filteredWishlist[index];
                         return WishlistProductCard(product: product);
@@ -92,8 +92,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
 }
 
 /* ================= EMPTY STATES ================= */
-
 class _EmptyWishlistState extends StatelessWidget {
+  const _EmptyWishlistState();
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -123,6 +124,8 @@ class _EmptyWishlistState extends StatelessWidget {
 }
 
 class _NoSearchResultsState extends StatelessWidget {
+  const _NoSearchResultsState();
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -152,7 +155,6 @@ class _NoSearchResultsState extends StatelessWidget {
 }
 
 /* ================= PRODUCT CARD ================= */
-
 class WishlistProductCard extends StatelessWidget {
   final ProductModel product;
 
@@ -181,7 +183,7 @@ class WishlistProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withAlpha(13),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -198,7 +200,8 @@ class WishlistProductCard extends StatelessWidget {
                         product.imageUrl,
                         fit: BoxFit.cover,
                         width: double.infinity,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.image),
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.image),
                       )
                     : const Icon(Icons.image),
               ),
@@ -224,14 +227,27 @@ class WishlistProductCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // ✅ Remove from wishlist
                 IconButton(
-                  onPressed: () => userProvider.removeFromWishlist(product.id),
+                  onPressed: () async {
+                    await userProvider.removeFromWishlist(product.id);
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content:
+                            Text('${product.name} removed from wishlist'),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   iconSize: 20,
                 ),
+                // Add to cart
                 IconButton(
                   onPressed: () async {
                     await userProvider.addToCart(product);
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${product.name} added to cart'),

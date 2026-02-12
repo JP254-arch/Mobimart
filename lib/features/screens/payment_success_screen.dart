@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:mobimart_app/features/screens/home_screen.dart';
 import 'package:mobimart_app/features/screens/profile_screen.dart';
 
 class PaymentSuccessScreen extends StatelessWidget {
@@ -48,27 +47,33 @@ class PaymentSuccessScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+
+              // Optional description / order info
               Text(
-                'Your order has been placed successfully. You will receive a confirmation shortly.',
+                'Your order has been placed successfully. '
+                'You will receive a confirmation shortly.',
                 style: theme.textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
 
-              // Back to Dashboard Button
+              // Back to Profile Button
               ElevatedButton.icon(
                 onPressed: () {
+                  // Remove all previous routes and go to Profile
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileScreen(),
+                    ),
                     (route) => false,
                   );
                 },
                 icon: const Icon(Icons.home),
                 label: const Text('Back to Profile'),
                 style: ElevatedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

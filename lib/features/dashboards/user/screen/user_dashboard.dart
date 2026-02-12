@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mobimart_app/features/cart/screens/cart_screen.dart';
 import 'package:mobimart_app/features/orders/screens/order_screen.dart';
-import 'package:mobimart_app/features/screens/cart_screen.dart';
 import 'package:mobimart_app/features/screens/help_support_screen.dart';
 import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
 import 'package:mobimart_app/features/screens/settings_screen.dart';

@@ -33,9 +33,10 @@ class HomeScreen extends StatelessWidget {
             // ================= HEADER =================
             Text(
               'Mobimart',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -140,9 +141,10 @@ class HomeScreen extends StatelessWidget {
             // ================= PRODUCTS =================
             Text(
               'Products',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
@@ -190,6 +192,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     onAddToCart: () async {
                       await userProvider.addToCart(product);
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('${product.name} added to cart'),
@@ -198,7 +201,9 @@ class HomeScreen extends StatelessWidget {
                       );
                     },
                     onAddToWishlist: () async {
+                      // ✅ Use the correct provider method (if wishlist still in UserProvider)
                       await userProvider.addToWishlist(product);
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Added to wishlist')),
                       );

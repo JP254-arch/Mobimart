@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/features/screens/payment_success_screen.dart';
@@ -6,7 +7,6 @@ import 'package:provider/provider.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
-
   static const String routeName = '/cart';
 
   Future<void> _checkout(BuildContext context, double totalPrice) async {
@@ -15,7 +15,7 @@ class CartScreen extends StatelessWidget {
 
     if (cartItems.isEmpty) return;
 
-    /// ---- PHONE INPUT DIALOG ----
+    // --- PHONE INPUT DIALOG ---
     final TextEditingController phoneController = TextEditingController();
     final phone = await showDialog<String>(
       context: context,
@@ -24,56 +24,85 @@ class CartScreen extends StatelessWidget {
         content: TextField(
           controller: phoneController,
           keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            hintText: '2547XXXXXXXX',
-          ),
+          decoration: const InputDecoration(hintText: '2547XXXXXXXX'),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel')),
           TextButton(
-            onPressed: () =>
-                Navigator.of(ctx).pop(phoneController.text.trim()),
-            child: const Text('Continue'),
-          ),
+              onPressed: () =>
+                  Navigator.of(ctx).pop(phoneController.text.trim()),
+              child: const Text('Continue')),
         ],
       ),
     );
 
     if (phone == null || phone.isEmpty) return;
 
-    /// ---- INITIATE DARAJA PAYMENT ----
-    final error = await userProvider.initiateDarajaPayment(
-      phone: phone,
-      amount: totalPrice,
-    );
-
-    if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
-      return;
-    }
-
-    /// ---- SUCCESS MESSAGE ----
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'STK Push sent. Check your phone to complete payment.',
+    // --- SHOW PROCESSING DIALOG ---
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Expanded(child: Text("Processing your payment...")),
+          ],
         ),
       ),
     );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const PaymentSuccessScreen(),
-      ),
-    );
+    try {
+      // --- INITIATE PAYMENT ---
+      final transactionId = await userProvider.initiateDarajaPayment(
+        phone: phone,
+        amount: totalPrice,
+      );
+
+      if (transactionId == null) {
+        Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Failed to initiate payment")),
+          );
+        }
+        return;
+      }
+
+      // --- LISTEN TO PAYMENT STATUS ---
+      userProvider.listenForPaymentStatus(
+        transactionId: transactionId,
+        onStatusChange: (success) async {
+          if (!context.mounted) return;
+          Navigator.pop(context); // close processing dialog
+
+          if (success) {
+            // Clear cart and move to orders automatically
+            await userProvider.clearCart();
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const PaymentSuccessScreen()),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Payment failed or cancelled")),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      Navigator.pop(context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error processing payment: $e")),
+        );
+      }
+    }
   }
 
   @override
@@ -87,10 +116,7 @@ class CartScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mobimart Cart'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Mobimart Cart')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: cartItems.isEmpty
@@ -101,13 +127,9 @@ class CartScreen extends StatelessWidget {
                   final product = cartItems[index];
                   return CartItemCard(
                     product: product,
-                    onRemove: () =>
-                        userProvider.removeFromCart(product.id),
+                    onRemove: () => userProvider.removeFromCart(product.id),
                     onQuantityChanged: (qty) =>
-                        userProvider.updateCartItemQuantity(
-                          product.id,
-                          qty,
-                        ),
+                        userProvider.updateCartItemQuantity(product.id, qty),
                   );
                 },
               ),
@@ -143,18 +165,11 @@ class CartScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 80,
-            color: Colors.grey,
-          ),
+          Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
           SizedBox(height: 16),
           Text(
             'Your cart is empty',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -197,31 +212,26 @@ class CartItemCard extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'KES ${(product.price * product.quantity).toStringAsFixed(2)}',
-                    style:
-                        const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Row(
                     children: [
                       IconButton(
                         icon: const Icon(Icons.remove),
                         onPressed: product.quantity > 1
-                            ? () => onQuantityChanged(
-                                  product.quantity - 1,
-                                )
+                            ? () => onQuantityChanged(product.quantity - 1)
                             : null,
                       ),
                       Text(product.quantity.toString()),
                       IconButton(
                         icon: const Icon(Icons.add),
-                        onPressed: () => onQuantityChanged(
-                          product.quantity + 1,
-                        ),
+                        onPressed: () =>
+                            onQuantityChanged(product.quantity + 1),
                       ),
                     ],
                   ),

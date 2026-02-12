@@ -1,10 +1,10 @@
 // lib/features/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:mobimart_app/features/cart/screens/cart_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/features/screens/profile_screen.dart';
-import 'package:mobimart_app/features/screens/cart_screen.dart';
 import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 import 'package:mobimart_app/features/screens/settings_screen.dart';
 

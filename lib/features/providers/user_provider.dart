@@ -122,7 +122,6 @@ class UserProvider with ChangeNotifier {
             .collection('users')
             .doc(newUser.uid)
             .set(newUser.toFirestore());
-
         _user = newUser;
       } else {
         _user = UserModel.fromFirestore(userDoc);
@@ -319,7 +318,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= DARJA PAYMENT + TRANSACTIONS =================
+  /// ================= DARJA PAYMENT =================
   Future<String?> initiateDarajaPayment({
     required String phone,
     required double amount,
@@ -327,7 +326,6 @@ class UserProvider with ChangeNotifier {
     if (_user == null) return 'User not logged in';
 
     try {
-      // 1. Create transaction (PENDING)
       final transactionRef = _firestore.collection('transactions').doc();
 
       await transactionRef.set({
@@ -339,9 +337,8 @@ class UserProvider with ChangeNotifier {
         'createdAt': Timestamp.now(),
       });
 
-      // 2. Call Daraja backend
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:3000/stkpush'),
+        Uri.parse('http://localhost:3000/stkpush'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'phone': phone,
@@ -358,21 +355,66 @@ class UserProvider with ChangeNotifier {
       final data = jsonDecode(response.body);
       debugPrint('STK Push Response: $data');
 
-      // 3. Save CheckoutRequestID (if returned)
       if (data['CheckoutRequestID'] != null) {
         await transactionRef.update({
           'checkoutRequestId': data['CheckoutRequestID'],
         });
       }
 
-      // ❗ DO NOT clear cart here
-      // Cart will be cleared ONLY after successful callback
-
-      return null;
+      return transactionRef.id;
     } catch (e) {
       debugPrint('Daraja payment error: $e');
-      return 'Payment initiation failed';
+      return null;
     }
+  }
+
+  /// ================= REAL-TIME PAYMENT LISTENER =================
+  /// This replaces polling and immediately notifies the UI
+  Future<void> listenForPaymentStatus({
+    required String transactionId,
+    required void Function(bool success) onStatusChange,
+  }) async {
+    final ref = _firestore.collection('transactions').doc(transactionId);
+
+    ref.snapshots().listen((snapshot) async {
+      if (!snapshot.exists) return;
+      final status = snapshot.get('status') as String? ?? 'pending';
+
+      if (status == 'success') {
+        await moveCartToOrders(transactionId: transactionId);
+        await clearCart();
+        onStatusChange(true);
+      } else if (status == 'failed' || status == 'cancelled') {
+        onStatusChange(false);
+      }
+    });
+  }
+
+  /// ================= MOVE CART TO ORDERS AND CLEAR CART =================
+  Future<void> moveCartToOrders({String? transactionId}) async {
+    if (_user == null || _user!.cart.isEmpty) return;
+
+    final cartItems = _user!.cart;
+
+    // 1. Create the order
+    final orderRef = _firestore.collection('orders').doc();
+    await orderRef.set({
+      'userId': _user!.uid,
+      'items': cartItems.map((p) => p.toJson()).toList(),
+      'transactionId': transactionId,
+      'status': 'paid',
+      'createdAt': Timestamp.now(),
+    });
+
+    // 2. Clear cart in Firestore
+    await _firestore.collection('users').doc(_user!.uid).update({
+      'cart': [],
+      'updatedAt': Timestamp.now(),
+    });
+
+    // 3. Clear cart locally and notify listeners
+    _user = _user!.copyWith(cart: []);
+    notifyListeners();
   }
 
   /// ================= PROFILE PHOTO =================

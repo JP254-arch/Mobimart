@@ -14,12 +14,12 @@ class ManageProductsScreen extends StatefulWidget {
 }
 
 class _ManageProductsScreenState extends State<ManageProductsScreen> {
-  final CollectionReference productsCollection = FirebaseFirestore.instance
-      .collection('products');
+  final CollectionReference productsCollection =
+      FirebaseFirestore.instance.collection('products');
 
-  String _searchQuery = '';
-  String _selectedCategory = 'All';
-  List<String> _categories = ['All'];
+  String searchQuery = '';
+  String selectedCategory = 'All';
+  List<String> categories = ['All'];
 
   @override
   void initState() {
@@ -34,15 +34,17 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       final category = doc['category'] ?? '';
       if (category.isNotEmpty) categoriesSet.add(category);
     }
+    if (!mounted) return;
     setState(() {
-      _categories = ['All', ...categoriesSet.toList()];
+      categories = ['All', ...categoriesSet];
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Products'), centerTitle: true),
+      appBar:
+          AppBar(title: const Text('Manage Products'), centerTitle: true),
       body: Column(
         children: [
           // ================= SEARCH BAR =================
@@ -58,30 +60,30 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
               ),
               onChanged: (value) {
                 setState(() {
-                  _searchQuery = value.toLowerCase();
+                  searchQuery = value.toLowerCase();
                 });
               },
             ),
           ),
 
           // ================= CATEGORY FILTER =================
-          if (_categories.length > 1)
+          if (categories.length > 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: selectedCategory,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                items: _categories
+                items: categories
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
                 onChanged: (value) {
                   if (value == null) return;
                   setState(() {
-                    _selectedCategory = value;
+                    selectedCategory = value;
                   });
                 },
               ),
@@ -105,18 +107,18 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 var productDocs = snapshot.data?.docs ?? [];
 
                 // Apply search filter
-                if (_searchQuery.isNotEmpty) {
+                if (searchQuery.isNotEmpty) {
                   productDocs = productDocs.where((doc) {
                     final name = (doc['name'] ?? '').toString().toLowerCase();
-                    return name.contains(_searchQuery);
+                    return name.contains(searchQuery);
                   }).toList();
                 }
 
                 // Apply category filter
-                if (_selectedCategory != 'All') {
+                if (selectedCategory != 'All') {
                   productDocs = productDocs.where((doc) {
                     final category = doc['category'] ?? '';
-                    return category == _selectedCategory;
+                    return category == selectedCategory;
                   }).toList();
                 }
 
@@ -151,9 +153,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
                           onPressed: () {
-                            Navigator.pop(
-                              context,
-                            ); // Go back to categories or home
+                            Navigator.pop(context);
                           },
                           icon: const Icon(Icons.arrow_back),
                           label: const Text('Browse Other Categories'),
@@ -167,15 +167,14 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                             ),
                           ),
                         ),
-                      
                       ],
                     ),
-                   );
+                  );
                 }
 
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemCount: productDocs.length,
                   itemBuilder: (context, index) {
                     final product = productDocs[index];
@@ -244,64 +243,60 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
   // ================= ADD PRODUCT =================
   Future<void> _addProduct() async {
-    final scaffoldContext = context;
+    if (!mounted) return;
     final newProduct = await Navigator.push(
-      scaffoldContext,
+      context,
       MaterialPageRoute(builder: (_) => const ProductFormScreen()),
     );
     if (!mounted) return;
     if (newProduct != null) {
-      ScaffoldMessenger.of(
-        scaffoldContext,
-      ).showSnackBar(const SnackBar(content: Text('Product added')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Product added')));
     }
   }
 
   // ================= EDIT PRODUCT =================
   Future<void> _editProduct(Map<String, dynamic> productData) async {
-    final scaffoldContext = context;
+    if (!mounted) return;
     final updatedProduct = await Navigator.push(
-      scaffoldContext,
+      context,
       MaterialPageRoute(
         builder: (_) => ProductFormScreen(productData: productData),
       ),
     );
     if (!mounted) return;
     if (updatedProduct != null) {
-      ScaffoldMessenger.of(
-        scaffoldContext,
-      ).showSnackBar(const SnackBar(content: Text('Product updated')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Product updated')));
     }
   }
 
   // ================= DELETE PRODUCT =================
   Future<void> _deleteProduct(String productId) async {
-    final scaffoldContext = context;
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
-      context: scaffoldContext,
+      context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Product'),
         content: const Text('Are you sure you want to delete this product?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(scaffoldContext, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(scaffoldContext, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
 
+    if (!mounted || confirm != true) return;
+
+    await productsCollection.doc(productId).delete();
     if (!mounted) return;
-    if (confirm == true) {
-      await productsCollection.doc(productId).delete();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        scaffoldContext,
-      ).showSnackBar(const SnackBar(content: Text('Product deleted')));
-    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Product deleted')));
   }
 }
