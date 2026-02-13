@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/features/models/product_model.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/features/screens/payment_success_screen.dart';
@@ -9,48 +8,148 @@ class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
   static const String routeName = '/cart';
 
+  /// ================= CHECKOUT =================
   Future<void> _checkout(BuildContext context, double totalPrice) async {
     final userProvider = context.read<UserProvider>();
     final cartItems = userProvider.currentUser?.cart ?? [];
 
     if (cartItems.isEmpty) return;
 
-    // --- PHONE INPUT DIALOG ---
+    // --- PHONE INPUT DIALOG WITH CARD STYLE ---
     final TextEditingController phoneController = TextEditingController();
     final phone = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Enter your phone number'),
-        content: TextField(
-          controller: phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(hintText: '2547XXXXXXXX'),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade200, Colors.orange.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.payment, size: 50, color: Colors.white),
+              const SizedBox(height: 12),
+              const Text(
+                'Pay with MPESA',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Enter your phone number to complete the payment',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: '2547XXXXXXXX',
+                  prefixIcon: const Icon(Icons.phone_android),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.greenAccent.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () =>
+                        Navigator.of(ctx).pop(phoneController.text.trim()),
+                    child: const Text('Pay Now'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () =>
-                  Navigator.of(ctx).pop(phoneController.text.trim()),
-              child: const Text('Continue')),
-        ],
       ),
     );
 
     if (phone == null || phone.isEmpty) return;
 
-    // --- SHOW PROCESSING DIALOG ---
+    // --- SHOW FANCY PROCESSING DIALOG ---
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Expanded(child: Text("Processing your payment...")),
-          ],
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade100, Colors.orange.shade300],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.storefront, size: 50, color: Colors.white),
+              const SizedBox(height: 12),
+              const Text(
+                'Paying Mobimart',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Amount: KES ${totalPrice.toStringAsFixed(2)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Waiting for payment confirmation via MPESA...',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -80,13 +179,13 @@ class CartScreen extends StatelessWidget {
           Navigator.pop(context); // close processing dialog
 
           if (success) {
-            // Clear cart and move to orders automatically
+            // Move cart to orders and clear cart
+            await userProvider.moveCartToOrders(transactionId: transactionId);
             await userProvider.clearCart();
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const PaymentSuccessScreen()),
+              MaterialPageRoute(builder: (_) => const PaymentSuccessScreen()),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
