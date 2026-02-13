@@ -44,7 +44,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: userDocs.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final user = userDocs[index];
               final userData = {

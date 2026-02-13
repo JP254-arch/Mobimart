@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: Consumer<ThemeProvider>(
-        builder: (_, theme, _) {  // <-- changed '__' to '_'
+        builder: (context, theme, child) {
           return MaterialApp(
             title: 'Mobimart Shop',
             debugShowCheckedModeBanner: false,

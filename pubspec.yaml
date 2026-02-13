@@ -55,7 +55,17 @@ flutter:
     - assets/images/user_placeholder.png
     - assets/icons/app_icon.png
     - assets/images/banners/
+    - assets/images/logo.jpeg
     - assets/Open_Sans/OpenSans-Regular.ttf
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Bold.ttf
+
+fonts:
+  - family: Roboto
+    fonts:
+      - asset: assets/fonts/Roboto-Regular.ttf
+      - asset: assets/fonts/Roboto-Bold.ttf
+        weight: 700
 
 flutter_icons:
   android: true

@@ -10,6 +10,7 @@ import '../screens/manage_users_screen.dart';
 import '../screens/manage_products_screen.dart';
 import '../screens/manage_orders_screen.dart';
 import 'package:provider/provider.dart';
+import '../screens/manage_finance_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -59,12 +60,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     try {
-      final usersSnapshot =
-          await FirebaseFirestore.instance.collection('users').get();
-      final productsSnapshot =
-          await FirebaseFirestore.instance.collection('products').get();
-      final ordersSnapshot =
-          await FirebaseFirestore.instance.collection('orders').get();
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .get();
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .get();
 
       if (mounted) {
         setState(() {
@@ -118,10 +122,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildProfileSection(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
+  Widget _buildProfileSection(ColorScheme colorScheme, TextTheme textTheme) {
     return Center(
       child: Column(
         children: [
@@ -131,14 +132,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             backgroundImage: (userPhotoUrl != null && userPhotoUrl!.isNotEmpty)
                 ? NetworkImage(userPhotoUrl!)
                 : const AssetImage('assets/images/user_placeholder.png')
-                    as ImageProvider,
+                      as ImageProvider,
           ),
           const SizedBox(height: 14),
           Text(
             userName.isNotEmpty ? userName : 'Loading...',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
@@ -199,6 +198,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  // ================== Quick Actions Section ==================
   Widget _buildQuickActions(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,6 +240,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ManageOrdersScreen()),
+              ),
+              colorScheme: colorScheme,
+            ),
+            _ActionCard(
+              icon: Icons.monetization_on_outlined,
+              label: 'Finance',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ManageFinanceScreen()),
               ),
               colorScheme: colorScheme,
             ),
@@ -334,7 +343,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               backgroundImage: (userPhotoUrl != null && userPhotoUrl.isNotEmpty)
                   ? NetworkImage(userPhotoUrl)
                   : const AssetImage('assets/images/user_placeholder.png')
-                      as ImageProvider,
+                        as ImageProvider,
             ),
           ),
           _drawerItem(Icons.people, 'Manage Users', () {
@@ -368,11 +377,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      onTap: onTap,
-    );
+    return ListTile(leading: Icon(icon), title: Text(title), onTap: onTap);
   }
 }
 
@@ -397,9 +402,7 @@ class _StatCard extends StatelessWidget {
     return Expanded(
       child: Card(
         color: containerColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -448,9 +451,7 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         color: colorScheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
