@@ -125,7 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return SwitchListTile(
                         title: const Text('Dark Mode'),
                         subtitle: const Text('Use dark appearance'),
-                        value: themeProvider.isDarkTheme ?? false,
+                        value: themeProvider.isDarkTheme,
                         activeColor: colorScheme.primary,
                         onChanged: themeProvider.setDarkTheme,
                       );

@@ -213,48 +213,112 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Widget _buildStatsCards() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: 'Total Orders',
-                value: totalOrders.toString(),
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Pending',
-                value: pendingOrders.toString(),
-                color: Colors.orange,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: 'Total Spent',
-                value: 'KSh ${totalSpent.toStringAsFixed(0)}',
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Wishlist',
-                value: wishlistCount.toString(),
-                color: Colors.pink,
-              ),
-            ),
-          ],
-        ),
-      ],
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: uid)
+          .snapshots(),
+      builder: (context, orderSnapshot) {
+        if (!orderSnapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        int totalOrders = 0;
+        int pendingOrders = 0;
+        double totalSpent = 0;
+
+        final orders = orderSnapshot.data!.docs;
+        totalOrders = orders.length;
+
+        for (var doc in orders) {
+          final data = doc.data() as Map<String, dynamic>;
+
+          final status = (data['status'] ?? '').toString();
+
+          if (status == 'pending') {
+            pendingOrders++;
+          }
+
+          /// ✅ Calculate spent money from items
+          if (status == 'paid') {
+            final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+
+            for (var item in items) {
+              final price = (item['price'] ?? 0) as num;
+              final quantity = (item['quantity'] ?? 1) as num;
+
+              totalSpent += price * quantity;
+            }
+          }
+        }
+
+        /// ✅ Wishlist comes from USERS document (NOT collection)
+        return StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .snapshots(),
+          builder: (context, userSnapshot) {
+            int wishlistCount = 0;
+
+            if (userSnapshot.hasData && userSnapshot.data!.exists) {
+              final userData =
+                  userSnapshot.data!.data() as Map<String, dynamic>;
+
+              final wishlist = List.from(userData['wishlist'] ?? []);
+              wishlistCount = wishlist.length;
+            }
+
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Total Orders',
+                        value: totalOrders.toString(),
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Pending',
+                        value: pendingOrders.toString(),
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Total Spent',
+                        value: 'KSh ${totalSpent.toStringAsFixed(0)}',
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Wishlist',
+                        value: wishlistCount.toString(),
+                        color: Colors.pink,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

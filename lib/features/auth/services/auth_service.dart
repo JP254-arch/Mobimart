@@ -6,73 +6,125 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Register a new user
-  Future<AppUser> register({
+  /// ============================================================
+  /// REGISTER USER
+  /// ============================================================
+  Future<void> register({
     required String name,
     required String email,
     required String password,
     String role = 'customer',
   }) async {
-    UserCredential cred = await _auth.createUserWithEmailAndPassword(
-      email: email,
+    final cred = await _auth.createUserWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
       password: password,
     );
-    User? firebaseUser = cred.user;
 
+    final firebaseUser = cred.user;
     if (firebaseUser == null) {
-      throw Exception('User registration failed');
+      throw FirebaseAuthException(
+        code: 'registration-failed',
+        message: 'User creation failed.',
+      );
     }
 
-    AppUser user = AppUser(
+    final user = AppUser(
       id: firebaseUser.uid,
-      name: name,
-      email: email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       role: role,
     );
 
-    // Save user to Firestore
-    await _db.collection('users').doc(firebaseUser.uid).set(user.toMap());
+    /// Save profile in Firestore
+    await _db.collection('users').doc(firebaseUser.uid).set({
+      ...user.toMap(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
-    return user; // non-nullable
-  }
+    /// Send verification email
+    await firebaseUser.sendEmailVerification();
 
-  // Login existing user
-  Future<AppUser> login(String email, String password) async {
-    UserCredential cred = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    User? firebaseUser = cred.user;
-
-    if (firebaseUser == null) {
-      throw Exception('Login failed');
-    }
-
-    // Fetch user data from Firestore
-    DocumentSnapshot doc =
-        await _db.collection('users').doc(firebaseUser.uid).get();
-
-    if (!doc.exists) {
-      throw Exception('User data not found');
-    }
-
-    return AppUser.fromMap(doc.id, doc.data() as Map<String, dynamic>);
-  }
-
-  // Logout
-  Future<void> logout() async {
+    /// IMPORTANT:
+    /// Immediately sign out to avoid web auth mismatch
     await _auth.signOut();
   }
 
-  // Get current user
-  Future<AppUser?> getCurrentUser() async {
-    User? firebaseUser = _auth.currentUser;
-    if (firebaseUser == null) return null;
+  /// ============================================================
+  /// LOGIN USER
+  /// ============================================================
+  Future<void> login({required String email, required String password}) async {
+    final cred = await _auth.signInWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
+      password: password,
+    );
 
-    DocumentSnapshot doc =
-        await _db.collection('users').doc(firebaseUser.uid).get();
+    User? user = cred.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'login-failed',
+        message: 'Login failed.',
+      );
+    }
+
+    /// Web-safe reload (prevents LegacyJavaScriptObject crash)
+    if (!user.emailVerified) {
+      try {
+        await user.reload();
+        user = _auth.currentUser;
+      } catch (_) {
+        // ignore web reload edge-case
+      }
+    }
+
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'login-failed',
+        message: 'Login failed.',
+      );
+    }
+
+    /// Enforce email verification
+    if (!user.emailVerified) {
+      await _auth.signOut();
+      throw FirebaseAuthException(
+        code: 'email-not-verified',
+        message: 'Please verify your email before logging in.',
+      );
+    }
+
+    /// DO NOT fetch Firestore user here.
+    /// AuthProvider listener will handle that automatically.
+  }
+
+  /// ============================================================
+  /// PASSWORD RESET
+  /// ============================================================
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim().toLowerCase());
+  }
+
+  /// ============================================================
+  /// FETCH FIRESTORE USER PROFILE
+  /// (Used by AuthProvider listener)
+  /// ============================================================
+  Future<AppUser?> fetchUser(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+
     if (!doc.exists) return null;
 
     return AppUser.fromMap(doc.id, doc.data() as Map<String, dynamic>);
+  }
+
+  /// ============================================================
+  /// CURRENT FIREBASE USER
+  /// ============================================================
+  User? get firebaseUser => _auth.currentUser;
+
+  /// ============================================================
+  /// LOGOUT
+  /// ============================================================
+  Future<void> logout() async {
+    await _auth.signOut();
   }
 }

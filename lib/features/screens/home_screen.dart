@@ -13,9 +13,10 @@ class HomeScreen extends StatelessWidget {
   static const String routeName = '/home';
 
   static const List<String> bannerImages = [
-    'assets/images/banners/banner1.png',
-    'assets/images/banners/banner2.png',
-    'assets/images/banners/banner3.png',
+    'assets/images/banners/banner1.jpg',
+    'assets/images/banners/banner2.jpg',
+    'assets/images/banners/banner3.jpeg',
+    'assets/images/banners/banner4.jpg',
   ];
 
   @override

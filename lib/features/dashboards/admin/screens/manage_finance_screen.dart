@@ -158,7 +158,7 @@ class _ManageFinanceScreenState extends State<ManageFinanceScreen> {
                   child: Column(
                     children: [
                       Icon(
-                        Icons.attach_money,
+                        Icons.wallet,
                         color: isDark ? Colors.green[200] : Colors.green,
                         size: 36,
                       ),

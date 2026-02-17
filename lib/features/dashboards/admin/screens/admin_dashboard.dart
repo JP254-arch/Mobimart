@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/screens/help_support_screen.dart';
 import 'package:mobimart_app/features/screens/privacy_policy_screen.dart';
+import 'package:mobimart_app/features/screens/profile_screen.dart';
 import 'package:mobimart_app/features/screens/settings_screen.dart';
 import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 import '../screens/manage_users_screen.dart';
@@ -244,7 +245,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               colorScheme: colorScheme,
             ),
             _ActionCard(
-              icon: Icons.monetization_on_outlined,
+              icon: Icons.wallet,
               label: 'Finance',
               onTap: () => Navigator.push(
                 context,
@@ -258,6 +259,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const WishlistScreen()),
+              ),
+              colorScheme: colorScheme,
+            ),
+            _ActionCard(
+              icon: Icons.person,
+              label: 'Profile',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               ),
               colorScheme: colorScheme,
             ),

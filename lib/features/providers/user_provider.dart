@@ -318,7 +318,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= DARJA PAYMENT =================
+  /// ================= DARAJA PAYMENT =================
   Future<String?> initiateDarajaPayment({
     required String phone,
     required double amount,
@@ -338,7 +338,7 @@ class UserProvider with ChangeNotifier {
       });
 
       final response = await http.post(
-        Uri.parse('http://localhost:3000/stkpush'),
+        Uri.parse('https://supercultivated-limonitic-adelia.ngrok-free.dev/stkpush'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'phone': phone,

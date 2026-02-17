@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:mobimart_app/features/auth/providers/auth_provider.dart';
 import 'package:mobimart_app/features/providers/theme_provider.dart';
 import 'package:mobimart_app/features/providers/user_provider.dart';
 // import 'package:mobimart_app/features/providers/payment_provider.dart';
@@ -25,6 +26,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ChangeNotifierProvider(create: (_) => AuthProvider()), 
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
       ],
