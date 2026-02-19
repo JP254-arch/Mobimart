@@ -1,4 +1,6 @@
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,10 +9,11 @@ import 'package:mobimart_app/features/providers/user_provider.dart';
 import 'package:mobimart_app/features/screens/cart_screen.dart';
 import 'package:mobimart_app/features/screens/wishlist_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   static const String routeName = '/settings';
 
   @override
@@ -19,6 +22,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final String passwordMask = '********';
+  String? _localPhotoUrl; // 🔹 holds updated photo immediately
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user logged in')),
-      );
+      return const Scaffold(body: Center(child: Text('No user logged in')));
     }
 
     return StreamBuilder<DocumentSnapshot>(
@@ -55,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final userName = userData['name'] ?? '';
         final userEmail = userData['email'] ?? currentUser.email ?? '';
         final userPhone = userData['phone'] ?? '';
-        final userPhotoUrl = userData['photoUrl'] ?? '';
+        final userPhotoUrl = _localPhotoUrl ?? userData['photoUrl'] ?? '';
 
         return Scaffold(
           appBar: AppBar(
@@ -87,15 +89,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         right: 0,
                         child: InkWell(
                           onTap: () async {
-                            final messenger =
-                                ScaffoldMessenger.of(context);
-                            final error =
-                                await userProvider.uploadProfilePhoto();
-                            if (!mounted) return;
-                            if (error != null) {
-                              messenger.showSnackBar(
-                                SnackBar(content: Text(error)),
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              final picker = ImagePicker();
+                              final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery,
+                                imageQuality: 75,
                               );
+                              if (image == null) return;
+
+                              // Cloudinary credentials
+                              const cloudName = 'ddvgqblf6';
+                              const uploadPreset = 'mobimart';
+                              final cloudinaryUrl =
+                                  'https://api.cloudinary.com/v1_1/$cloudName/image/upload';
+
+                              late String photoUrl;
+
+                              if (kIsWeb) {
+                                final bytes = await image.readAsBytes();
+                                final request =
+                                    http.MultipartRequest('POST', Uri.parse(cloudinaryUrl));
+                                request.fields['upload_preset'] = uploadPreset;
+                                request.files.add(
+                                  http.MultipartFile.fromBytes('file', bytes,
+                                      filename: image.name),
+                                );
+
+                                final response = await request.send();
+                                final respStr = await response.stream.bytesToString();
+                                final data = jsonDecode(respStr);
+                                photoUrl = data['secure_url'];
+                              } else {
+                                final request =
+                                    http.MultipartRequest('POST', Uri.parse(cloudinaryUrl));
+                                request.fields['upload_preset'] = uploadPreset;
+                                request.files.add(await http.MultipartFile.fromPath(
+                                    'file', image.path));
+
+                                final response = await request.send();
+                                final respStr = await response.stream.bytesToString();
+                                final data = jsonDecode(respStr);
+                                photoUrl = data['secure_url'];
+                              }
+
+                              // Save to Firestore
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(currentUser.uid)
+                                  .update({
+                                'photoUrl': photoUrl,
+                                'updatedAt': Timestamp.now(),
+                              });
+
+                              setState(() {
+                                _localPhotoUrl = photoUrl;
+                              });
+                            } catch (e) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Failed to upload photo'),
+                                ),
+                              );
+                              debugPrint('Cloudinary upload error: $e');
                             }
                           },
                           child: CircleAvatar(
@@ -211,9 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const CartScreen(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
                         );
                       },
                     ),
@@ -227,7 +281,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ================= SECTION TITLE =================
   Widget _sectionTitle(String title, TextTheme textTheme) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -235,15 +288,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.only(bottom: 12),
         child: Text(
           title,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  // ================= EDITABLE TILE =================
   Widget _editableTile({
     required IconData icon,
     required String label,
@@ -271,7 +321,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ================= PASSWORD TILE =================
   Widget _passwordTile(UserProvider provider) {
     final scheme = Theme.of(context).colorScheme;
 
@@ -304,14 +353,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
 
         if (!mounted) return;
-        if (error != null) {
+        if (error != null)
           messenger.showSnackBar(SnackBar(content: Text(error)));
-        }
       },
     );
   }
 
-  // ================= INPUT DIALOG =================
   Future<String?> _inputDialog({
     required String title,
     String initialValue = '',
@@ -328,9 +375,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: TextField(
           controller: controller,
           obscureText: obscure,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
@@ -338,8 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -348,14 +392,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/* ===================== ACTION CARD ===================== */
 class _ActionCard extends StatelessWidget {
   const _ActionCard({
     required this.icon,
     required this.label,
     required this.onTap,
   });
-
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -369,9 +411,7 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         color: scheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

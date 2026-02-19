@@ -56,14 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
-    final valid = _formKey.currentState?.validate() ?? false;
-    if (!valid || _isLoading) return;
+    if (!(_formKey.currentState?.validate() ?? false) || _isLoading) return;
 
     setState(() => _isLoading = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
       final error = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
@@ -99,7 +97,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final account = await GoogleAuth.signIn();
-
       if (account == null) {
         if (mounted) _showErrorSnack('Google sign-in cancelled');
         return;
@@ -182,7 +179,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: Icon(IconlyLight.message),
                             ),
                             onFieldSubmitted: (_) {
-                              FocusScope.of(context).requestFocus(_passwordFocus);
+                              FocusScope.of(
+                                context,
+                              ).requestFocus(_passwordFocus);
                             },
                           ),
 
@@ -200,7 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: const Icon(IconlyLight.lock),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureText ? Icons.visibility : Icons.visibility_off,
+                                  _obscureText
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -247,7 +248,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SubtitleTextWidget(label: "Don't have an account?"),
+                              const SubtitleTextWidget(
+                                label: "Don't have an account?",
+                              ),
                               TextButton(
                                 onPressed: () {
                                   Navigator.pushNamed(
