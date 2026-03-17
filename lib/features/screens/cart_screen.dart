@@ -16,7 +16,7 @@ class CartScreen extends StatelessWidget {
     if (cartItems.isEmpty) return;
 
     // --- PHONE INPUT DIALOG WITH CARD STYLE ---
-    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController(text: '+254');
     final phone = await showDialog<String>(
       context: context,
       builder: (ctx) => Dialog(
@@ -46,7 +46,7 @@ class CartScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Enter your phone number to complete the payment',
+                'Enter phone number to complete the payment',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70),
               ),
@@ -56,14 +56,23 @@ class CartScreen extends StatelessWidget {
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.white,
-                  hintText: '2547XXXXXXXX',
+                  fillColor: const Color.fromARGB(255, 32, 107, 182),
+                  hintText: '+254*********',
                   prefixIcon: const Icon(Icons.phone_android),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
+                onChanged: (value) {
+                  // Ensure the 254 prefix is never removed
+                  if (!value.startsWith('254')) {
+                    phoneController.text = '254';
+                    phoneController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: phoneController.text.length),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 20),
               Row(

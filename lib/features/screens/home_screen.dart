@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// ================= PAGINATION =================
   int _currentPage = 0;
-  static const int _itemsPerPage = 6;
+  static const int _itemsPerPage = 9; // 3 per row x 3 rows per page
 
   void _nextPage(int totalProducts) {
     final maxPage = (totalProducts / _itemsPerPage).ceil() - 1;
@@ -61,69 +61,34 @@ class _HomeScreenState extends State<HomeScreen> {
         ? []
         : products.sublist(startIndex, endIndex);
 
-    final totalPages = products.isEmpty
-        ? 1
-        : (products.length / _itemsPerPage).ceil();
-
     return SafeArea(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// ================= HEADER =================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          /// ================= STATIC TOP BAR =================
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Mobimart',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
                 /// SEARCH
-                TextField(
-                  onChanged: (value) {
-                    productProvider.setSearchQuery(value);
-                    _resetPagination();
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search products or categories...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Theme.of(context).cardColor.withAlpha(25),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: TextField(
+                    onChanged: (value) {
+                      productProvider.setSearchQuery(value);
+                      _resetPagination();
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search products or categories...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Theme.of(context).cardColor.withAlpha(25),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                /// CAROUSEL
-                CarouselSlider(
-                  options: CarouselOptions(
-                    height: 170,
-                    autoPlay: true,
-                    enlargeCenterPage: true,
-                    viewportFraction: 1,
-                  ),
-                  items: bannerImages.map((imagePath) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        imagePath,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 20),
 
                 /// CATEGORIES
                 SizedBox(
@@ -131,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: categories.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       final category = categories[index];
@@ -152,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withAlpha(13),
+                                color: const Color.fromARGB(255, 37, 179, 32).withAlpha(13),
                                 blurRadius: 6,
                                 offset: const Offset(0, 4),
                               ),
@@ -166,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 size: 24,
                                 color: isSelected
                                     ? Colors.white
-                                    : Colors.grey[700],
+                                    : const Color.fromARGB(255, 7, 180, 13),
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -188,20 +154,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                Text(
-                  'Products',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
               ],
             ),
           ),
 
-          /// ================= PRODUCTS + PAGINATION =================
+          /// ================= SCROLLABLE PART =================
           Expanded(
             child: products.isEmpty
                 ? Center(
@@ -211,82 +168,111 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.grey.shade400,
                     ),
                   )
-                : Column(
-                    children: [
-                      /// GRID
-                      Expanded(
-                        child: GridView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: visibleProducts.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.70,
-                              ),
-                          itemBuilder: (context, index) {
-                            final product = visibleProducts[index];
-
-                            return ProductCard(
-                              product: product,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      ProductDetailsPage(product: product),
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        /// CAROUSEL
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: CarouselSlider(
+                            options: CarouselOptions(
+                              height: 170,
+                              autoPlay: true,
+                              enlargeCenterPage: true,
+                              viewportFraction: 1,
+                            ),
+                            items: bannerImages.map((imagePath) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.asset(
+                                  imagePath,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
                                 ),
-                              ),
-                              onAddToCart: () async {
-                                await userProvider.addToCart(product);
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${product.name} added to cart',
-                                    ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+
+                        /// PRODUCTS GRID
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: visibleProducts.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3, // 3 products per row
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 0.60,
+                                ),
+                            itemBuilder: (context, index) {
+                              final product = visibleProducts[index];
+
+                              return ProductCard(
+                                product: product,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ProductDetailsPage(product: product),
                                   ),
-                                );
-                              },
-                              onAddToWishlist: () async {
-                                await userProvider.addToWishlist(product);
-                              },
-                            );
-                          },
+                                ),
+                                onAddToCart: () async {
+                                  await userProvider.addToCart(product);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${product.name} added to cart',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onAddToWishlist: () async {
+                                  await userProvider.addToWishlist(product);
+                                },
+                              );
+                            },
+                          ),
                         ),
-                      ),
 
-                      /// PAGINATION CONTROLS
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 16,
+                        /// PAGINATION CONTROLS
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _currentPage == 0
+                                    ? null
+                                    : _previousPage,
+                                icon: const Icon(Icons.arrow_back_ios),
+                                label: const Text('Prev'),
+                              ),
+                              TextButton.icon(
+                                onPressed:
+                                    (_currentPage + 1) * _itemsPerPage >=
+                                        products.length
+                                    ? null
+                                    : () => _nextPage(products.length),
+                                icon: const Icon(Icons.arrow_forward_ios),
+                                label: const Text('Next'),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios),
-                              onPressed: _currentPage == 0
-                                  ? null
-                                  : _previousPage,
-                            ),
-
-                            Text(
-                              'Page ${_currentPage + 1} of $totalPages',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios),
-                              onPressed: (_currentPage + 1) >= totalPages
-                                  ? null
-                                  : () => _nextPage(products.length),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
           ),
         ],
@@ -318,7 +304,7 @@ class ProductCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Theme.of(context).cardColor,
@@ -345,22 +331,25 @@ class ProductCard extends StatelessWidget {
                     : const Icon(Icons.image),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
             Text(
               'KSh ${product.price.toStringAsFixed(0)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: primaryColor,
+                fontSize: 13,
               ),
             ),
-            const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
                   onPressed: onAddToWishlist,
                   icon: const Icon(Icons.favorite_border, color: Colors.red),
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
                 IconButton(
                   onPressed: onAddToCart,
@@ -368,6 +357,9 @@ class ProductCard extends StatelessWidget {
                     Icons.shopping_cart_outlined,
                     color: Colors.green,
                   ),
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
