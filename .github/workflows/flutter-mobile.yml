@@ -1,4 +1,4 @@
-name: Build Flutter Mobile APK
+name: Build Flutter Mobile APK & App Bundle
 
 on:
   push:
@@ -10,22 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Install Flutter (stable channel)
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
+      # 3️⃣ Get dependencies
       - name: Install dependencies
         run: flutter pub get
 
+      # 4️⃣ Build Android APK
       - name: Build Android APK
         run: flutter build apk --release
 
+      # 5️⃣ Build Android App Bundle (for Play Store)
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      # 6️⃣ Upload APK as artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Mobimart-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # 7️⃣ Upload App Bundle as artifact
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mobimart-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
