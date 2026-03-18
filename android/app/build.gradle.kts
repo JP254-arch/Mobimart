@@ -10,7 +10,9 @@ plugins {
 
 android {
     namespace = "com.example.mobimart_app"
-    compileSdk = flutter.compileSdkVersion
+    
+    // Updated SDK versions
+    compileSdk = 33  // updated from flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -23,12 +25,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.mobimart_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21  // Flutter default minimum SDK
+        targetSdk = 33  // updated from flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -38,7 +37,15 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Enable shrinkResources & minify if needed
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
+    }
+
+    // Optional: enable viewBinding if needed
+    buildFeatures {
+        viewBinding = true
     }
 }
 
