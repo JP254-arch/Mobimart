@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// ================= PAGINATION =================
   int _currentPage = 0;
-  static const int _itemsPerPage = 39; 
+  static const int _itemsPerPage = 30; 
 
   void _nextPage(int totalProducts) {
     final maxPage = (totalProducts / _itemsPerPage).ceil() - 1;
