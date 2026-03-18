@@ -3,7 +3,7 @@ name: Build Flutter Mobile APK & App Bundle
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build_mobile:
