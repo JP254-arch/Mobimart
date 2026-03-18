@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// ================= PAGINATION =================
   int _currentPage = 0;
-  static const int _itemsPerPage = 9; // 3 per row x 3 rows per page
+  static const int _itemsPerPage = 30; 
 
   void _nextPage(int totalProducts) {
     final maxPage = (totalProducts / _itemsPerPage).ceil() - 1;
@@ -69,6 +69,24 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
               children: [
+                /// APP TITLE
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Mobimart',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 /// SEARCH
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -279,6 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Null get newMethod => null;
 }
 
 /// ================= PRODUCT CARD =================

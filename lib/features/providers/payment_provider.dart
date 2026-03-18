@@ -39,7 +39,7 @@ class PaymentProvider with ChangeNotifier {
 
       // 2️⃣ Call backend
       final response = await http.post(
-        Uri.parse('https://supercultivated-limonitic-adelia.ngrok-free.dev/stkpush'), // 🔁 replace in production
+        Uri.parse('https://supercultivated-limonitic-adelia.ngrok-free.dev/stkpush'), 
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'transactionId': txRef.id,
