@@ -52,7 +52,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/mobimart.png
+    - assets/images/Mobimart.png
     - assets/images/user_placeholder.png
     - assets/icons/app_icon.png
     - assets/images/banners/
